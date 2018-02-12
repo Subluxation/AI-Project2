@@ -43,7 +43,7 @@ public class AnthonySpencerTeamClient extends TeamClient {
 	double weaponsProbability = 1;
 	boolean shouldShoot = false;
 	int threatZone = 200;
-	
+
 	// Representing internal state
 	String goal = "";
 
@@ -63,10 +63,10 @@ public class AnthonySpencerTeamClient extends TeamClient {
 				if (asteroidCollectorID == null) {
 					asteroidCollectorID = ship.getId();
 				}
-				
+
 				AbstractAction action = getAggressiveAsteroidCollectorAction(space, ship);
 				actions.put(ship.getId(), action);
-				
+
 			} else {
 				// it is a base.  Heuristically decide when to use the shield (TODO)
 				actions.put(actionable.getId(), new DoNothingAction());
@@ -74,7 +74,7 @@ public class AnthonySpencerTeamClient extends TeamClient {
 		} 
 		return actions;
 	}
-	
+
 	/**
 	 * Gets the action for the asteroid collecting ship (while being aggressive towards the other ships)
 	 * @param space
@@ -85,7 +85,7 @@ public class AnthonySpencerTeamClient extends TeamClient {
 			Ship ship) {
 		AbstractAction current = ship.getCurrentAction();
 		Position currentPosition = ship.getPosition();
-		
+
 		// aim for a beacon if there isn't enough energy
 		if (ship.getEnergy() < 2000) {
 			Beacon beacon = pickNearestBeacon(space, ship);
@@ -100,8 +100,8 @@ public class AnthonySpencerTeamClient extends TeamClient {
 			shouldShoot = false;
 			return newAction;
 		}
-		
-		
+
+
 		// -------------------------------------------------
 		// if the ship has resources but energy is low
 		//
@@ -114,7 +114,7 @@ public class AnthonySpencerTeamClient extends TeamClient {
 			shouldShoot = false;
 			return newAction;
 		}
-		
+
 
 		// if the ship has enough resourcesAvailable, take it back to base
 		if (ship.getResources().getTotal() > 1000) {
@@ -124,15 +124,15 @@ public class AnthonySpencerTeamClient extends TeamClient {
 			shouldShoot = false;
 			return newAction;
 		}
-		
-		
+
+
 		// -------------------------------------------------
 		// if energy is really low and an enemy ship is nearby
 		//
 		// if low on energy and potentially getting chased by enemy
 		// retreat to an ally ship
 		// -------------------------------------------------
-		
+
 		if (ship.getEnergy() < 1000 && pickNearestEnemyShip(space, ship) != null)
 		{
 			Ship ally = pickNearestFriendlyShip(space, ship);
@@ -141,6 +141,12 @@ public class AnthonySpencerTeamClient extends TeamClient {
 			shouldShoot = false;
 			return newAction;
 		}
+		//-------------------------------------------------
+		//Bad Asteroid detection
+		//pickNearestUselessAsteroid(space, ship)
+
+
+
 
 		// did we bounce off the base?
 		if (ship.getResources().getTotal() == 0 && ship.getEnergy() > 2000 && aimingForBase.containsKey(ship.getId()) && aimingForBase.get(ship.getId())) {
@@ -155,7 +161,7 @@ public class AnthonySpencerTeamClient extends TeamClient {
 
 			// see if there is an enemy ship nearby
 			Ship enemy = pickNearestEnemyShip(space, ship);
-			
+
 			// find the highest valued nearby asteroid
 			Asteroid asteroid = pickHighestValueNearestFreeAsteroid(space, ship);
 
@@ -175,18 +181,18 @@ public class AnthonySpencerTeamClient extends TeamClient {
 					return newAction;
 				}
 			}
-			
+
 			// now decide which one to aim for
 			if (asteroid != null) {
 				double enemyDistance = space.findShortestDistance(ship.getPosition(), enemy.getPosition());
 				double asteroidDistance = space.findShortestDistance(ship.getPosition(), asteroid.getPosition());
-				
+
 				// we are aggressive, so aim for enemies if they are nearby
 				if (enemyDistance < asteroidDistance && enemy.getResources().getTotal() > 0) {
 					shouldShoot = true;
 					newAction = new MoveToObjectAction(space, currentPosition, enemy,
 							enemy.getPosition().getTranslationalVelocity());
-					
+
 				} else {
 					shouldShoot = false;
 					newAction = new MoveToObjectAction(space, currentPosition, asteroid,
@@ -199,7 +205,7 @@ public class AnthonySpencerTeamClient extends TeamClient {
 			}
 			return newAction;
 		}
-		
+
 		// -------------------------------------------------
 		// if an asteroid is in the threat zone
 		//
@@ -214,32 +220,52 @@ public class AnthonySpencerTeamClient extends TeamClient {
 		// return the current if new goals haven't formed
 		return ship.getCurrentAction();
 	}
+	private Boolean isBadAsteroidWithinRadius(Toroidal2DPhysics space,Ship ship, Asteroid badAsteroid) {
+		//Increase the radius of the ship to that of +5 for a broader search
+		int radius = ship.getRadius() + 5;
+		//Is the location free of any objects?
+		if(space.isLocationFree(ship.getPosition(), radius) == true) {
+			return false;
+		}
+		//Objects found within +5 radius of ship, check if it is the bad asteroid
+		else {
+			for (AbstractObject object : space.getAllObjects()) {
+				if (space.findShortestDistanceVector(object.getPosition(), ship.getPosition()).getMagnitude() <= 
+						(radius + (2 * object.getRadius()))) {
+					if(object.getId() == badAsteroid.getId()) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+	}
 
 	private AbstractAction avoidAsteroid(Toroidal2DPhysics space, Ship ship)
 	{
 		AbstractAction newAction = null;
-		
+
 		Asteroid asteroid = pickNearestUselessAsteroid(space, ship);
 		double shipX = ship.getPosition().getX();
 		double shipY = ship.getPosition().getY();
-		
-//		if (asteroid.getPosition().getTotalTranslationalVelocity() == 0.0)
-//		{
-//			Position pos = new Position(asteroid.getPosition().getX() + 1, asteroid.getPosition().getY() + 1);
-//			newAction = new MoveAction(space, ship.getPosition(), pos);
-//			return newAction;
-//		}
-//		else
-//		{
-//			Position pos = new Position(asteroid.getPosition().getX() + 1, asteroid.getPosition().getY() + 1);
-//			newAction = new MoveAction(space, ship.getPosition(), pos);
-//			return newAction;
-//		}
+
+		//		if (asteroid.getPosition().getTotalTranslationalVelocity() == 0.0)
+		//		{
+		//			Position pos = new Position(asteroid.getPosition().getX() + 1, asteroid.getPosition().getY() + 1);
+		//			newAction = new MoveAction(space, ship.getPosition(), pos);
+		//			return newAction;
+		//		}
+		//		else
+		//		{
+		//			Position pos = new Position(asteroid.getPosition().getX() + 1, asteroid.getPosition().getY() + 1);
+		//			newAction = new MoveAction(space, ship.getPosition(), pos);
+		//			return newAction;
+		//		}
 		Position pos = new Position(asteroid.getPosition().getX() * 2, asteroid.getPosition().getY());
 		newAction = new MoveAction(space, ship.getPosition(), pos, ship.getPosition().getTranslationalVelocity().add(asteroid.getPosition().getTranslationalVelocity()));
 		return newAction;
 	}
-	
+
 	private boolean isInCollision(Toroidal2DPhysics space, Ship ship)
 	{
 		Asteroid closestUselessAsteroid = pickNearestUselessAsteroid(space, ship);
@@ -261,15 +287,15 @@ public class AnthonySpencerTeamClient extends TeamClient {
 		Set<Asteroid> asteroids = space.getAsteroids();
 		Asteroid bestAsteroid = null;
 		double minDistance = Double.POSITIVE_INFINITY;
-		
+
 		for (Asteroid asteroid : asteroids) {
-				if (!asteroid.isMineable()) {
-					double dist = space.findShortestDistance(asteroid.getPosition(), ship.getPosition());
-					if (dist < minDistance) {
-						//System.out.println("Considering asteroid " + asteroid.getId() + " as a best one");
-						bestAsteroid = asteroid;
-					}
+			if (!asteroid.isMineable()) {
+				double dist = space.findShortestDistance(asteroid.getPosition(), ship.getPosition());
+				if (dist < minDistance) {
+					//System.out.println("Considering asteroid " + asteroid.getId() + " as a best one");
+					bestAsteroid = asteroid;
 				}
+			}
 		}
 		//System.out.println("Best asteroid has " + bestMoney);
 		return bestAsteroid;
@@ -295,7 +321,7 @@ public class AnthonySpencerTeamClient extends TeamClient {
 				}
 			}
 		}
-		
+
 		return nearestShip;
 	}
 	/**
@@ -312,14 +338,14 @@ public class AnthonySpencerTeamClient extends TeamClient {
 			if (otherShip.getTeamName().equals(ship.getTeamName())) {
 				continue;
 			}
-			
+
 			double distance = space.findShortestDistance(ship.getPosition(), otherShip.getPosition());
 			if (distance < minDistance) {
 				minDistance = distance;
 				nearestShip = otherShip;
 			}
 		}
-		
+
 		return nearestShip;
 	}
 
@@ -479,27 +505,27 @@ public class AnthonySpencerTeamClient extends TeamClient {
 				}
 			}		
 		} 
-		
+
 		// see if you can buy EMPs
 		if (purchaseCosts.canAfford(PurchaseTypes.POWERUP_EMP_LAUNCHER, resourcesAvailable)) {
 			for (AbstractActionableObject actionableObject : actionableObjects) {
 				if (actionableObject instanceof Ship) {
 					Ship ship = (Ship) actionableObject;
-					
+
 					if (!ship.getId().equals(asteroidCollectorID) && !ship.isValidPowerup(PurchaseTypes.POWERUP_EMP_LAUNCHER.getPowerupMap())) {
 						purchases.put(ship.getId(), PurchaseTypes.POWERUP_EMP_LAUNCHER);
 					}
 				}
 			}		
 		} 
-		
+
 
 		// can I buy a ship?
 		if (purchaseCosts.canAfford(PurchaseTypes.SHIP, resourcesAvailable) && bought_base == false) {
 			for (AbstractActionableObject actionableObject : actionableObjects) {
 				if (actionableObject instanceof Base) {
 					Base base = (Base) actionableObject;
-					
+
 					purchases.put(base.getId(), PurchaseTypes.SHIP);
 					break;
 				}
@@ -530,8 +556,8 @@ public class AnthonySpencerTeamClient extends TeamClient {
 				powerUps.put(actionableObject.getId(), powerup);
 			}
 		}
-		
-		
+
+
 		return powerUps;
 	}
 
