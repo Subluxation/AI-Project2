@@ -143,7 +143,10 @@ public class AnthonySpencerTeamClient extends TeamClient {
 		}
 		//-------------------------------------------------
 		//Bad Asteroid detection
-		//pickNearestUselessAsteroid(space, ship)
+		//
+		if(isBadAsteroidWithinRadius(space, ship, pickNearestUselessAsteroid(space, ship))) {
+			//TODO: Avoid asteroid
+		}
 
 
 
