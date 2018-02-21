@@ -38,6 +38,14 @@ public class GridSquare {
 			return false;
 	}
 	
+	public boolean containsShip(Toroidal2DPhysics space, Ship ship)
+	{
+		if (space.findShortestDistance(center, ship.getPosition()) <= 10)
+			return true;
+		else
+			return false;
+	}
+	
 	public boolean isEmpty(Toroidal2DPhysics space)
 	{
 		return space.isLocationFree(center, 10);
