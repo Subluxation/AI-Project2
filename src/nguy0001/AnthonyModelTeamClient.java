@@ -1,13 +1,14 @@
 package nguy0001;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
-import nguy0001.MoveActionCustom;
 import spacesettlers.actions.MoveToObjectAction;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
@@ -15,6 +16,7 @@ import spacesettlers.actions.MoveAction;
 import spacesettlers.actions.PurchaseCosts;
 import spacesettlers.actions.PurchaseTypes;
 import spacesettlers.clients.TeamClient;
+import spacesettlers.graphics.RectangleGraphics;
 import spacesettlers.graphics.SpacewarGraphics;
 import spacesettlers.objects.AbstractActionableObject;
 import spacesettlers.objects.AbstractObject;
@@ -40,16 +42,14 @@ import spacesettlers.utilities.Vector2D;
 public class AnthonyModelTeamClient extends TeamClient {
 	HashMap<UUID, Ship> asteroidToShipMap;
 	HashMap<UUID, Boolean> aimingForBase;
+	// Grid represented by a matrix of GridSquares
+	ArrayList<ArrayList<GridSquare>> grid;
+//	GridSquare grid;
 	UUID asteroidCollectorID;
 	double weaponsProbability = 1;
 	boolean shouldShoot = false;
 	int threatZone = 200;
 
-	// Representing internal states
-	final String FLEE = "FLEE";
-	final String FREE = "FREE";
-
-	String state = FREE;
 
 	/**
 	 * Assigns ships to asteroids and beacons, as described above
@@ -90,169 +90,107 @@ public class AnthonyModelTeamClient extends TeamClient {
 	private AbstractAction getAggressiveAsteroidCollectorAction(Toroidal2DPhysics space, Ship ship) {
 		AbstractAction current = ship.getCurrentAction();
 		Position currentPosition = ship.getPosition();
+		
 
 		// Asteroid badAst = pickNearestUselessAsteroid(space, ship);
-		if (state.equals(FREE)) {
-			// aim for a beacon if there isn't enough energy
-			if (ship.getEnergy() < 2000) {
-				Beacon beacon = pickNearestBeacon(space, ship);
-				shouldShoot = false;
-				aimingForBase.put(ship.getId(), false);
-				return retrieveBeacon(space, ship, beacon);
-			}
 
-			// -------------------------------------------------
-			// if the ship has resources but energy is low
-			//
-			// purpose to get score without risk of getting killed
-			// -------------------------------------------------
-			if (ship.getResources().getTotal() > 500 && ship.getEnergy() < 2000) {
-				Base base = findNearestBase(space, ship);
-				aimingForBase.put(ship.getId(), true);
-				shouldShoot = false;
-				state = FLEE;
-				return goBackToNearestBase(space, ship, base);
-			}
+		// aim for a beacon if there isn't enough energy
+		if (ship.getEnergy() < 2000) {
+			Beacon beacon = pickNearestBeacon(space, ship);
+			shouldShoot = false;
+			aimingForBase.put(ship.getId(), false);
+			return retrieveBeacon(space, ship, beacon);
+		}
 
-			// if the ship has enough resourcesAvailable, take it back to base
-			if (ship.getResources().getTotal() > 1000) {
-				Base base = findNearestBase(space, ship);
-				aimingForBase.put(ship.getId(), true);
-				shouldShoot = false;
-				state = FLEE;
-				return goBackToNearestBase(space, ship, base);
-			}
+		// -------------------------------------------------
+		// if the ship has resources but energy is low
+		//
+		// purpose to get score without risk of getting killed
+		// -------------------------------------------------
+		if (ship.getResources().getTotal() > 500 && ship.getEnergy() < 2000) {
+			Base base = findNearestBase(space, ship);
+			aimingForBase.put(ship.getId(), true);
+			shouldShoot = false;
+			return goBackToNearestBase(space, ship, base);
+		}
 
-			// did we bounce off the base?
-			if (ship.getResources().getTotal() == 0 && ship.getEnergy() > 2000
-					&& aimingForBase.containsKey(ship.getId()) && aimingForBase.get(ship.getId())) {
-				current = null;
-				aimingForBase.put(ship.getId(), false);
-				shouldShoot = false;
-			}
+		// if the ship has enough resourcesAvailable, take it back to base
+		if (ship.getResources().getTotal() > 1000) {
+			Base base = findNearestBase(space, ship);
+			aimingForBase.put(ship.getId(), true);
+			shouldShoot = false;
+			return goBackToNearestBase(space, ship, base);
+		}
 
-			// otherwise either for an asteroid or an enemy ship (depending on who is closer
-			// and what we need)
-			if (current == null || current.isMovementFinished(space)) {
-				aimingForBase.put(ship.getId(), false);
+		// did we bounce off the base?
+		if (ship.getResources().getTotal() == 0 && ship.getEnergy() > 2000 && aimingForBase.containsKey(ship.getId())
+				&& aimingForBase.get(ship.getId())) {
+			current = null;
+			aimingForBase.put(ship.getId(), false);
+			shouldShoot = false;
+		}
 
-				// see if there is an enemy ship nearby
-				Ship enemy = pickNearestEnemyShip(space, ship);
+		// otherwise either for an asteroid or an enemy ship (depending on who is closer
+		// and what we need)
+		if (current == null || current.isMovementFinished(space)) {
+			aimingForBase.put(ship.getId(), false);
 
-				// find the highest valued nearby asteroid
-				Asteroid asteroid = pickNearestFreeAsteroid(space, ship);
+			// see if there is an enemy ship nearby
+			Ship enemy = pickNearestEnemyShip(space, ship);
 
-				AbstractAction newAction = null;
+			// find the highest valued nearby asteroid
+			Asteroid asteroid = pickNearestFreeAsteroid(space, ship);
 
-				// if there is no enemy nearby, go for an asteroid
-				if (enemy == null) {
-					if (asteroid != null) {
-						state = FREE;
-						return mineAsteroid(space, ship, asteroid);
-					} else {
-						// no enemy and no asteroid, just skip this turn (shouldn't happen often)
-						shouldShoot = true;
-						newAction = new DoNothingAction();
-						state = FREE;
-						return newAction;
-					}
-				}
+			AbstractAction newAction = null;
 
-				// now decide which one to aim for
+			// if there is no enemy nearby, go for an asteroid
+			if (enemy == null) {
 				if (asteroid != null) {
-					double enemyDistance = space.findShortestDistance(ship.getPosition(), enemy.getPosition());
-					double asteroidDistance = space.findShortestDistance(ship.getPosition(), asteroid.getPosition());
-
-					// we are aggressive, so aim for enemies if they are nearby
-					// --- and if they have any resources ---
-					if (enemyDistance < asteroidDistance && enemy.getResources().getTotal() > 0) {
-						shouldShoot = true;
-						newAction = new MoveToObjectAction(space, currentPosition, enemy,
-								enemy.getPosition().getTranslationalVelocity());
-						state = FREE;
-
-					} else {
-						shouldShoot = false;
-						newAction = mineAsteroid(space, ship, asteroid);
-						state = FREE;
-					}
-					return newAction;
+					return mineAsteroid(space, ship, asteroid);
 				} else {
+					// no enemy and no asteroid, just skip this turn (shouldn't happen often)
+					shouldShoot = true;
+					newAction = new DoNothingAction();
+					return newAction;
+				}
+			}
+
+			// now decide which one to aim for
+			if (asteroid != null) {
+				double enemyDistance = space.findShortestDistance(ship.getPosition(), enemy.getPosition());
+				double asteroidDistance = space.findShortestDistance(ship.getPosition(), asteroid.getPosition());
+
+				// we are aggressive, so aim for enemies if they are nearby
+				// --- and if they have any resources ---
+				if (enemyDistance < asteroidDistance && enemy.getResources().getTotal() > 0) {
+					shouldShoot = true;
 					newAction = new MoveToObjectAction(space, currentPosition, enemy,
 							enemy.getPosition().getTranslationalVelocity());
-					state = FREE;
+
+				} else {
+					shouldShoot = false;
+					newAction = mineAsteroid(space, ship, asteroid);
 				}
 				return newAction;
+			} else {
+				newAction = new MoveToObjectAction(space, currentPosition, enemy,
+						enemy.getPosition().getTranslationalVelocity());
 			}
-
+			return newAction;
 		}
 
-		if (state.equals(FLEE)) {
-			// -------------------------------------------------
-			// if the ship has dumped its resources and has gained its Energy back
-			//
-			// purpose to get score without risk of getting killed
-			// -------------------------------------------------
-			if (ship.getResources().getTotal() == 0 && ship.getEnergy() > 2000) {
-				Base base = findNearestBase(space, ship);
-				aimingForBase.put(ship.getId(), true);
-				shouldShoot = false;
-				state = FREE;
-				return goBackToNearestBase(space, ship, base);
-			}
-			// -------------------------------------------------
-			// if the ship has resources but energy is low
-			//
-			// purpose to get score without risk of getting killed
-			// -------------------------------------------------
-			if (ship.getResources().getTotal() > 500 && ship.getEnergy() < 3000) {
-				Base base = findNearestBase(space, ship);
-				aimingForBase.put(ship.getId(), true);
-				shouldShoot = false;
-				state = FLEE;
-				return goBackToNearestBase(space, ship, base);
-			}
-
-			// if the ship has enough resourcesAvailable, take it back to base
-			if (ship.getResources().getTotal() > 1000) {
-				Base base = findNearestBase(space, ship);
-				aimingForBase.put(ship.getId(), true);
-				shouldShoot = false;
-				state = FLEE;
-				return goBackToNearestBase(space, ship, base);
-			}
-
-			if (ship.getEnergy() < 2000) {
-				Base base = findNearestBase(space, ship);
-				aimingForBase.put(ship.getId(), true);
-				shouldShoot = false;
-				state = FLEE;
-				return goBackToNearestBase(space, ship, base);
-			}
-
-			// did we bounce off the base?
-			if (ship.getResources().getTotal() == 0 && ship.getEnergy() > 2000
-					&& aimingForBase.containsKey(ship.getId()) && aimingForBase.get(ship.getId())) {
-				current = null;
-				aimingForBase.put(ship.getId(), false);
-				shouldShoot = false;
-				state = FREE;
-			}
-
-		}
 		return ship.getCurrentAction();
 
 	}
-	
-	public void avoidAsteroid(Toroidal2DPhysics space, Ship object1, Asteroid object2)
-	{
+
+	public void avoidAsteroid(Toroidal2DPhysics space, Ship object1, Asteroid object2) {
 		Vector2D distanceVec = space.findShortestDistanceVector(object1.getPosition(), object2.getPosition());
 		Vector2D unitNormal = distanceVec.getUnitVector();
 		Vector2D unitTangent = new Vector2D(-unitNormal.getYValue(), unitNormal.getXValue());
-		
+
 		double m1 = object1.getMass();
 		double m2 = object2.getMass();
-		
+
 		// get the velocity vectors
 		Vector2D velocity1 = object1.getPosition().getTranslationalVelocity();
 		Vector2D velocity2 = object2.getPosition().getTranslationalVelocity();
@@ -261,15 +199,15 @@ public class AnthonyModelTeamClient extends TeamClient {
 		double u1 = velocity1.dot(unitNormal);
 		double u2 = velocity2.dot(unitNormal);
 		double t1 = velocity1.dot(unitTangent);
-		
+
 		double v1 = ((u1 * (m1 - m2)) + (2 * m2 * u2)) / (m1 + m2);
 		// now get it back to the original space
 		Vector2D vel1Normal = unitNormal.multiply(v1);
 		Vector2D vel1Tangent = unitTangent.multiply(t1);
-		
+
 		// add the normal and tangential parts
 		Vector2D newVelocity1 = vel1Normal.add(vel1Tangent);
-		
+
 		object1.getPosition().setTranslationalVelocity(newVelocity1);
 	}
 	/*
@@ -281,14 +219,6 @@ public class AnthonyModelTeamClient extends TeamClient {
 	public AbstractAction goBackToNearestBase(Toroidal2DPhysics space, Ship ship, Base base) {
 		AbstractAction newAction = new MoveToObjectAction(space, ship.getPosition(), base,
 				ship.getPosition().getTranslationalVelocity());
-//		if (!isPathClearOfAsteroids(space, ship.getPosition(), base.getPosition(), space.getAsteroids(), 100)) {
-//			Asteroid badAst = pickNearestUselessAsteroid(space, ship);
-//			avoidAsteroid(space, ship, badAst);
-//			// newAction = new MoveToObjectAction(space, ship.getPosition(), base,
-//			// ship.getPosition().getTranslationalVelocity().fastRotate((float) 0.7071,
-//			// (float) 0.7071));
-//		}
-		
 		return newAction;
 	}
 
@@ -301,17 +231,6 @@ public class AnthonyModelTeamClient extends TeamClient {
 		AbstractAction newAction = null;
 		newAction = new MoveToObjectAction(space, ship.getPosition(), beacon,
 				ship.getPosition().getTranslationalVelocity());
-
-//		if (!isPathClearOfAsteroids(space, ship.getPosition(), beacon.getPosition(), space.getAsteroids(), 50)) {
-//			System.out.println("PATH OBSTRUCTED => BEACON");
-//			Asteroid badAst = pickNearestUselessAsteroid(space, ship);
-//			avoidAsteroid(space, ship, badAst);
-//			// newAction = new MoveAction(space, currentPosition, base.getPosition(),
-//			// ship.getPosition().getTranslationalVelocity());
-//			// newAction = new MoveToObjectAction(space, ship.getPosition(), beacon,
-//			// ship.getPosition().getTranslationalVelocity().fastRotate((float) 0.7071,
-//			// (float) 0.7071));
-//		}
 		return newAction;
 	}
 
@@ -323,19 +242,8 @@ public class AnthonyModelTeamClient extends TeamClient {
 	 */
 	public AbstractAction mineAsteroid(Toroidal2DPhysics space, Ship ship, Asteroid asteroid) {
 		AbstractAction newAction = null;
-
-//		if (!isPathClearOfAsteroids(space, ship.getPosition(), asteroid.getPosition(), space.getAsteroids(), 50)) {
-//			System.out.println("PATH OBSTRUCTED => MINEABLE ASTEROID");
-//			Asteroid badAst = pickNearestUselessAsteroid(space, ship);
-//			avoidAsteroid(space, ship, badAst);
-//			// newAction = new MoveToObjectAction(space, ship.getPosition(), asteroid,
-//			// ship.getPosition().getTranslationalVelocity().fastRotate((float) 0.7071,
-//			// (float) 0.7071));
-//			
-//		} else {
-			newAction = new MoveToObjectAction(space, ship.getPosition(), asteroid,
-					ship.getPosition().getTranslationalVelocity());
-//		}
+		newAction = new MoveToObjectAction(space, ship.getPosition(), asteroid,
+				ship.getPosition().getTranslationalVelocity());
 		return newAction;
 	}
 
@@ -382,7 +290,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 		return pathIsClear;
 
 	}
-	
+
 	/**
 	 * Returns the asteroid of no value
 	 * 
@@ -390,22 +298,22 @@ public class AnthonyModelTeamClient extends TeamClient {
 	 * 
 	 * @return
 	 */
-	private Asteroid pickNearestUselessAsteroid(Toroidal2DPhysics space, Ship ship)
-	{
+	private Asteroid pickNearestUselessAsteroid(Toroidal2DPhysics space, Ship ship) {
 		Set<Asteroid> asteroids = space.getAsteroids();
 		Asteroid bestAsteroid = null;
 		double minDistance = Double.POSITIVE_INFINITY;
-		
+
 		for (Asteroid asteroid : asteroids) {
-				if (!asteroid.isMineable()) {
-					double dist = space.findShortestDistance(asteroid.getPosition(), ship.getPosition());
-					if (dist < minDistance) {
-						//System.out.println("Considering asteroid " + asteroid.getId() + " as a best one");
-						bestAsteroid = asteroid;
-					}
+			if (!asteroid.isMineable()) {
+				double dist = space.findShortestDistance(asteroid.getPosition(), ship.getPosition());
+				if (dist < minDistance) {
+					// System.out.println("Considering asteroid " + asteroid.getId() + " as a best
+					// one");
+					bestAsteroid = asteroid;
 				}
+			}
 		}
-		//System.out.println("Best asteroid has " + bestMoney);
+		// System.out.println("Best asteroid has " + bestMoney);
 		return bestAsteroid;
 	}
 
@@ -559,6 +467,38 @@ public class AnthonyModelTeamClient extends TeamClient {
 		asteroidToShipMap = new HashMap<UUID, Ship>();
 		asteroidCollectorID = null;
 		aimingForBase = new HashMap<UUID, Boolean>();
+		grid = new ArrayList<ArrayList<GridSquare>>();
+		// Width and HeightGrids hold the respective sizes of each grid
+		// Where each grid square has a width of 1/25 of the map's width
+		// and likewise for its height
+		double widthGrid = space.getWidth()/25;
+		double heightGrid = space.getHeight()/25;
+		// temp used to add in the Grid matrix
+		ArrayList<GridSquare> temp = new ArrayList<GridSquare>();
+		// First grid square at 0,0
+		temp.add(new GridSquare(0, widthGrid, 0, heightGrid));
+		// First row of gridSquares
+		for (int i = 1; i < 25; i++)
+		{
+			temp.add(new GridSquare(temp.get(i - 1).endX, temp.get(i - 1).endX + widthGrid, temp.get(i - 1).startY, heightGrid));
+		}
+		grid.add(temp);
+		// Rest of the rows
+		// Represents the rows
+		for (int i = 1; i < 25; i++)
+		{
+			temp = new ArrayList<GridSquare>();
+			// For the first square of the row, it starts on the very left, and then uses the previous row's endY to determine its startY
+			temp.add(new GridSquare(0, widthGrid, grid.get(i - 1).get(0).endY, grid.get(i - 1).get(0).endY + heightGrid));
+			// Represents the columns
+			for (int j = 1; j < 25; j++)
+			{
+				// For the next squares in the row, it uses the previous squares in its own row to determine its startX
+				temp.add(new GridSquare(temp.get(j - 1).endX, temp.get(j - 1).endX + widthGrid, grid.get(i - 1).get(0).endY, grid.get(i - 1).get(0).endY + heightGrid));
+			}
+			grid.add(temp);
+		}
+		
 	}
 
 	@Override
@@ -570,7 +510,15 @@ public class AnthonyModelTeamClient extends TeamClient {
 	@Override
 	public Set<SpacewarGraphics> getGraphics() {
 		// TODO Auto-generated method stub
-		return null;
+		Set<SpacewarGraphics> graphics = new LinkedHashSet<SpacewarGraphics>();
+		for (ArrayList<GridSquare> grids: grid)
+		{
+			for (GridSquare square: grids)
+			{
+				graphics.add(square.getGraphics());
+			}
+		}
+		return graphics;
 	}
 
 	@Override
@@ -629,18 +577,19 @@ public class AnthonyModelTeamClient extends TeamClient {
 
 		// can I buy a ship?
 		// Commented out, don't buy a ship
-//		if (purchaseCosts.canAfford(PurchaseTypes.SHIP, resourcesAvailable) && bought_base == false) {
-//			for (AbstractActionableObject actionableObject : actionableObjects) {
-//				if (actionableObject instanceof Base) {
-//					Base base = (Base) actionableObject;
-//
-//					purchases.put(base.getId(), PurchaseTypes.SHIP);
-//					break;
-//				}
-//
-//			}
-//
-//		}
+		// if (purchaseCosts.canAfford(PurchaseTypes.SHIP, resourcesAvailable) &&
+		// bought_base == false) {
+		// for (AbstractActionableObject actionableObject : actionableObjects) {
+		// if (actionableObject instanceof Base) {
+		// Base base = (Base) actionableObject;
+		//
+		// purchases.put(base.getId(), PurchaseTypes.SHIP);
+		// break;
+		// }
+		//
+		// }
+		//
+		// }
 
 		return purchases;
 	}
