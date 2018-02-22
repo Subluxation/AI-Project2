@@ -2,6 +2,9 @@ package nguy0001;
 
 import spacesettlers.simulator.Toroidal2DPhysics;
 import spacesettlers.utilities.Position;
+
+import java.util.ArrayList;
+
 import spacesettlers.objects.AbstractObject;
 import spacesettlers.objects.Ship;
 
@@ -22,7 +25,7 @@ public class GridSquare {
 		this.startY = startY;
 		this.endY = endY;
 		
-		this.center = new Position((endX - startX) / 2, (endY - startY) / 2);
+		this.center = new Position((endX + startX) / 2, (endY - startY) / 2);
 	}
 	
 	public void calculatePathCost(Toroidal2DPhysics space, AbstractObject goal, Ship ship)
@@ -50,4 +53,5 @@ public class GridSquare {
 	{
 		return space.isLocationFree(center, 10);
 	}
+	
 }
