@@ -17,6 +17,9 @@ public class GridSquare {
 	Position center;
 	
 	double pathCost;
+	boolean isEmpty = false;
+	boolean containsGoal = false;
+	boolean containsShip = false;
 	
 	public GridSquare(double startX, double endX, double startY, double endY)
 	{
@@ -31,34 +34,53 @@ public class GridSquare {
 	
 	public void calculatePathCost(Toroidal2DPhysics space, AbstractObject goal, Ship ship)
 	{
-		this.pathCost = space.findShortestDistance(ship.getPosition(), center) + space.findShortestDistance(center, goal.getPosition());
+		if (containsShip)
+			this.pathCost = space.findShortestDistance(center, goal.getPosition());
+		else if (containsGoal)
+			this.pathCost = 0.0;
+		else
+			this.pathCost = space.findShortestDistance(ship.getPosition(), center) + space.findShortestDistance(center, goal.getPosition());
 	}
 	
 	public boolean containsGoal(Toroidal2DPhysics space, AbstractObject goal)
 	{
 		if (space.findShortestDistance(center, goal.getPosition()) <= space.getHeight()/25)
-			return true;
+			containsGoal = true;
 		else
-			return false;
+			containsGoal = false;
+		
+		return containsGoal;
 	}
 	
 	public boolean containsShip(Toroidal2DPhysics space, Ship ship)
 	{
 		if (space.findShortestDistance(center, ship.getPosition()) <= space.getHeight()/25)
-			return true;
+			containsShip = true;
 		else
-			return false;
+			containsShip = false;
+		
+		return containsShip;
 	}
 	
 	public boolean isEmpty(Toroidal2DPhysics space)
 	{
-		return space.isLocationFree(center, space.getWidth()/25);
+		if (space.isLocationFree(center, space.getWidth()/50))
+			this.isEmpty = true;
+		else
+			this.isEmpty = false;
+		return isEmpty;
 	}
 	
 	public RectangleGraphics getGraphics()
 	{
-		return new RectangleGraphics((int) (endX - startX), (int) (endY - startY), Color.RED, new Position(startX, startY));
+		if (containsShip)
+			return new RectangleGraphics((int) (endX - startX), (int) (endY - startY), Color.BLUE, new Position(startX, startY));
+		else if (containsGoal)
+			return new RectangleGraphics((int) (endX - startX), (int) (endY - startY), Color.YELLOW, new Position(startX, startY));
+		else
+			return new RectangleGraphics((int) (endX - startX), (int) (endY - startY), Color.RED, new Position(startX, startY));
 	}
+	
 	
 	public double getWidth()
 	{
@@ -68,5 +90,10 @@ public class GridSquare {
 	public double getHeight()
 	{
 		return endY - startY;
+	}
+	
+	public double getPathCost()
+	{
+		return pathCost;
 	}
 }

@@ -10,7 +10,7 @@
 	
 	<!-- The name that shows up in the ladder -->
 	<!-- <ladderName>Anthony and Spencer's Team</ladderName> -->
-	<ladderName>AnthonySpencer</ladderName>
+	<ladderName>Error404</ladderName>
 	
 	<!-- The number of ships in the team.  Note, if this is bigger than the maximum number of allowable ships per team, it is ignored -->
 	<numberInitialShipsInTeam>1</numberInitialShipsInTeam>
