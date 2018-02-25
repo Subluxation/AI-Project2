@@ -10,8 +10,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
-
-//import nguy0001.MoveActionCustom;
+import nguy0001.GridSquare;
 import spacesettlers.actions.MoveToObjectAction;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
@@ -50,6 +49,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 	// Grid represented by a matrix of GridSquares
 	// Queue and Grid both initialized in the initialize() method
 	ArrayList<ArrayList<GridSquare>> grid;
+	ArrayList<GridSquare> adjacentGrids;
 //	GridSquare grid;
 	UUID asteroidCollectorID;
 	double weaponsProbability = 1;
@@ -100,6 +100,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 		if (space.getCurrentTimestep() % 10 == 0)
 		{
 			updateObstacles(space, ship, goal);
+			System.out.println("Updating Grid...");
 		}
 		
 		// Asteroid badAst = pickNearestUselessAsteroid(space, ship);
@@ -478,7 +479,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 		asteroidCollectorID = null;
 		aimingForBase = new HashMap<UUID, Boolean>();
 		grid = new ArrayList<ArrayList<GridSquare>>();
-		queue = new PriorityQueue<GridSquare>(new GridComparator());
+		//queue = new PriorityQueue<GridSquare>(new GridComparator());
 		// Width and HeightGrids hold the respective sizes of each grid
 		// Where each grid square has a width of 1/25 of the map's width
 		// and likewise for its height
@@ -510,6 +511,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 			grid.add(temp);
 		}
 		
+		
 //		updateObstacles(space, null);
 	}
 
@@ -517,6 +519,37 @@ public class AnthonyModelTeamClient extends TeamClient {
 	public void shutDown(Toroidal2DPhysics space) {
 		// TODO Auto-generated method stub
 
+	}
+	
+	/**
+	 * A* method for searching
+	 * @param space
+	 */
+	public void aStarMethod(Toroidal2DPhysics space) {
+		GridSquare shipGrid = null;
+		
+		//Finds the ships grid
+		for(ArrayList<GridSquare> g: grid) {
+			if(g.get(g.size()).containsShip) {
+				shipGrid = g.get(g.size());
+			}
+		}
+		//Get all 8 grids adjacent to the ships grid
+		for(ArrayList<GridSquare> g: grid) {
+			if(g.get(g.size()).isAdjacent(shipGrid)) {
+				adjacentGrids.add(g.get(g.size()));
+			}
+		}
+		//TODO:Determine h(n) and g(n) values for each of the grids
+		
+		
+		//TODO:add grids to priority queue using g(n) + h(n), lowest score wins priority
+		
+		
+		//TODO:pop grids and upon visiting them, pop the next, etc.
+		
+		
+		
 	}
 	
 	public void updateObstacles(Toroidal2DPhysics space, Ship ship, AbstractObject goal)

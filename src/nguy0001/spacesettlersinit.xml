@@ -4,9 +4,9 @@
 	<classname>nguy0001.AnthonySpencerTeamClient</classname>
 	
 	<!-- You can choose the color your team's ships will be on the screen.  Specify the red, green, and blue components -->
-	<teamColorRed>50</teamColorRed>
-	<teamColorGreen>0</teamColorGreen>
-	<teamColorBlue>200</teamColorBlue>
+	<teamColorRed>70</teamColorRed>
+	<teamColorGreen>20</teamColorGreen>
+	<teamColorBlue>15</teamColorBlue>
 	
 	<!-- The name that shows up in the ladder -->
 	<!-- <ladderName>Anthony and Spencer's Team</ladderName> -->
