@@ -14,9 +14,9 @@ public class GridSquare {
 	public double endX;
 	public double startY;
 	public double endY;
-	Position center;
+	public Position center;
 	
-	double pathCost;
+	double pathCost = 0.0;
 	public boolean isEmpty = false;
 	public boolean containsGoal = false;
 	public boolean containsShip = false;
@@ -33,7 +33,30 @@ public class GridSquare {
 		
 		this.center = new Position((endX + startX) / 2, (endY + startY) / 2);
 	}
-	
+	/**
+	 * To calculate h(n) and g(n) and sets pathCost to f(n). { f(n) = g(n) + h(n) }
+	 * @param space
+	 * @param goal
+	 * @param ship
+	 */
+	public void calculatePathCost(Toroidal2DPhysics space, AbstractObject goal, Ship ship, GridSquare currentGrid)
+	{
+		//Calculating g(n)
+		if (containsShip)
+			this.pathCost = space.findShortestDistance(center, goal.getPosition());
+		else if (containsGoal)
+			this.pathCost = 0.0;
+		else
+			this.pathCost = space.findShortestDistance(ship.getPosition(), center) + space.findShortestDistance(center, goal.getPosition());
+		//Calculating h(n)
+		this.pathCost += space.findShortestDistance(goal.getPosition(), currentGrid.center);
+	}
+	/**
+	 * For updateObstacles method in model client
+	 * @param space
+	 * @param goal
+	 * @param ship
+	 */
 	public void calculatePathCost(Toroidal2DPhysics space, AbstractObject goal, Ship ship)
 	{
 		if (containsShip)
@@ -42,7 +65,9 @@ public class GridSquare {
 			this.pathCost = 0.0;
 		else
 			this.pathCost = space.findShortestDistance(ship.getPosition(), center) + space.findShortestDistance(center, goal.getPosition());
+		
 	}
+	
 	
 	public boolean containsGoal(Toroidal2DPhysics space, AbstractObject goal)
 	{
@@ -99,7 +124,6 @@ public class GridSquare {
 		else {
 			this.inside2 = false;
 		}
-		
 		return (inside1 || inside2);
 	}
 	/**
@@ -169,6 +193,23 @@ public class GridSquare {
 		}
 		this.isEmpty = true;
 		return isEmpty;
+		
+	}
+	/**
+	 * 
+	 * @param grid
+	 * @return
+	 */
+	public int CompareTo(GridSquare grid) {
+		if(this.pathCost > grid.pathCost) {
+			return 1;
+		}
+		else if(this.pathCost < grid.pathCost){
+			return -1;
+		}
+		else {
+			return 0;
+		}
 		
 	}
 	

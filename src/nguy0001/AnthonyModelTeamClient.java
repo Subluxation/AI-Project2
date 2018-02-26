@@ -2,15 +2,18 @@ package nguy0001;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
 import nguy0001.GridSquare;
+import nguy0001.GridComparator;
 import spacesettlers.actions.MoveToObjectAction;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
@@ -42,20 +45,23 @@ import spacesettlers.utilities.Vector2D;
  * @author amy modified by Anthony and Spencer
  */
 public class AnthonyModelTeamClient extends TeamClient {
+	Beacon beacon;
 	HashMap<UUID, Ship> asteroidToShipMap;
 	HashMap<UUID, Boolean> aimingForBase;
+	Comparator<GridSquare> comparator = new GridComparator();
 	// Priority Queue of GridSquares
-	PriorityQueue<GridSquare> queue;
+	PriorityQueue<GridSquare> queue = new PriorityQueue<>(comparator);;
 	// Grid represented by a matrix of GridSquares
 	// Queue and Grid both initialized in the initialize() method
 	ArrayList<ArrayList<GridSquare>> grid;
-	ArrayList<GridSquare> adjacentGrids;
-//	GridSquare grid;
+	ArrayList<GridSquare> adjacentGrids = new ArrayList<GridSquare>();
+	//	GridSquare grid;
 	UUID asteroidCollectorID;
 	double weaponsProbability = 1;
 	boolean shouldShoot = false;
 	AbstractObject goal;
 	int threatZone = 200;
+
 
 
 	/**
@@ -74,7 +80,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 				if (asteroidCollectorID == null) {
 					asteroidCollectorID = ship.getId();
 				}
-				
+
 				AbstractAction action = getAggressiveAsteroidCollectorAction(space, ship);
 				actions.put(ship.getId(), action);
 
@@ -83,6 +89,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 				actions.put(actionable.getId(), new DoNothingAction());
 			}
 		}
+
 		return actions;
 	}
 
@@ -97,101 +104,126 @@ public class AnthonyModelTeamClient extends TeamClient {
 	private AbstractAction getAggressiveAsteroidCollectorAction(Toroidal2DPhysics space, Ship ship) {
 		AbstractAction current = ship.getCurrentAction();
 		Position currentPosition = ship.getPosition();
-		if (space.getCurrentTimestep() % 10 == 0)
+
+		//update the grid every 15 timesteps
+		if (space.getCurrentTimestep() % 15 == 0)
 		{
 			updateObstacles(space, ship, goal);
-			System.out.println("Updating Grid...");
 		}
-		
-		// Asteroid badAst = pickNearestUselessAsteroid(space, ship);
 
-		// aim for a beacon if there isn't enough energy
-//		if (ship.getEnergy() > 2000) {
-			Beacon beacon = pickNearestBeacon(space, ship);
+		//run aStar method every 60 timesteps
+		if(space.getCurrentTimestep() % 60 == 0) {
+			//Pick nearest beacon and select it as goal
+			beacon = pickNearestBeacon(space, ship);
 			shouldShoot = false;
 			aimingForBase.put(ship.getId(), false);
 			this.goal = beacon;
-			return retrieveBeacon(space, ship, beacon);
-//		}
+			aStarMethod(space, goal, ship);
+		}
+		if(ship.getCurrentAction().isMovementFinished(space)) {
+			//If the queue is empty, then research for new Beacon
+			if(queue.poll() != null) {
+				System.out.println("Going to Location: " + queue.poll().center.toString());
+				return new MoveAction(space,ship.getPosition(),queue.poll().center);
+			}
+			else {
+				System.out.println("Queue is Empty:");
+				beacon = pickNearestBeacon(space, ship);
+				shouldShoot = false;
+				aimingForBase.put(ship.getId(), false);
+				this.goal = beacon;
+				aStarMethod(space, goal, ship);
+				return new DoNothingAction();
+			}
+		}
+		return new DoNothingAction();
+		
+
+		// Asteroid badAst = pickNearestUselessAsteroid(space, ship);
+
+		// aim for a beacon if there isn't enough energy
+		//		if (ship.getEnergy() > 2000) {
+
+		//		}
 
 		// -------------------------------------------------
 		// if the ship has resources but energy is low
 		//
 		// purpose to get score without risk of getting killed
 		// -------------------------------------------------
-//		if (ship.getResources().getTotal() > 500 && ship.getEnergy() < 2000) {
-//			Base base = findNearestBase(space, ship);
-//			aimingForBase.put(ship.getId(), true);
-//			shouldShoot = false;
-//			return goBackToNearestBase(space, ship, base);
-//		}
-//
-//		// if the ship has enough resourcesAvailable, take it back to base
-//		if (ship.getResources().getTotal() > 1000) {
-//			Base base = findNearestBase(space, ship);
-//			aimingForBase.put(ship.getId(), true);
-//			shouldShoot = false;
-//			return goBackToNearestBase(space, ship, base);
-//		}
+		//		if (ship.getResources().getTotal() > 500 && ship.getEnergy() < 2000) {
+		//			Base base = findNearestBase(space, ship);
+		//			aimingForBase.put(ship.getId(), true);
+		//			shouldShoot = false;
+		//			return goBackToNearestBase(space, ship, base);
+		//		}
+		//
+		//		// if the ship has enough resourcesAvailable, take it back to base
+		//		if (ship.getResources().getTotal() > 1000) {
+		//			Base base = findNearestBase(space, ship);
+		//			aimingForBase.put(ship.getId(), true);
+		//			shouldShoot = false;
+		//			return goBackToNearestBase(space, ship, base);
+		//		}
 
 		// did we bounce off the base?
-//		if (ship.getResources().getTotal() == 0 && ship.getEnergy() > 2000 && aimingForBase.containsKey(ship.getId())
-//				&& aimingForBase.get(ship.getId())) {
-//			current = null;
-//			aimingForBase.put(ship.getId(), false);
-//			shouldShoot = false;
-//		}
+		//		if (ship.getResources().getTotal() == 0 && ship.getEnergy() > 2000 && aimingForBase.containsKey(ship.getId())
+		//				&& aimingForBase.get(ship.getId())) {
+		//			current = null;
+		//			aimingForBase.put(ship.getId(), false);
+		//			shouldShoot = false;
+		//		}
 
 		// otherwise either for an asteroid or an enemy ship (depending on who is closer
 		// and what we need)
-//		if (current == null || current.isMovementFinished(space)) {
-//			aimingForBase.put(ship.getId(), false);
-//
-//			// see if there is an enemy ship nearby
-//			Ship enemy = pickNearestEnemyShip(space, ship);
-//
-//			// find the highest valued nearby asteroid
-//			Asteroid asteroid = pickNearestFreeAsteroid(space, ship);
-//
-//			AbstractAction newAction = null;
-//
-//			// if there is no enemy nearby, go for an asteroid
-//			if (enemy == null) {
-//				if (asteroid != null) {
-//					return mineAsteroid(space, ship, asteroid);
-//				} else {
-//					// no enemy and no asteroid, just skip this turn (shouldn't happen often)
-//					shouldShoot = true;
-//					newAction = new DoNothingAction();
-//					return newAction;
-//				}
-//			}
-//
-//			// now decide which one to aim for
-//			if (asteroid != null) {
-//				double enemyDistance = space.findShortestDistance(ship.getPosition(), enemy.getPosition());
-//				double asteroidDistance = space.findShortestDistance(ship.getPosition(), asteroid.getPosition());
-//
-//				// we are aggressive, so aim for enemies if they are nearby
-//				// --- and if they have any resources ---
-//				if (enemyDistance < asteroidDistance && enemy.getResources().getTotal() > 0) {
-//					shouldShoot = true;
-//					newAction = new MoveToObjectAction(space, currentPosition, enemy,
-//							enemy.getPosition().getTranslationalVelocity());
-//
-//				} else {
-//					shouldShoot = false;
-//					newAction = mineAsteroid(space, ship, asteroid);
-//				}
-//				return newAction;
-//			} else {
-//				newAction = new MoveToObjectAction(space, currentPosition, enemy,
-//						enemy.getPosition().getTranslationalVelocity());
-//			}
-//			return newAction;
-//		}
+		//		if (current == null || current.isMovementFinished(space)) {
+		//			aimingForBase.put(ship.getId(), false);
+		//
+		//			// see if there is an enemy ship nearby
+		//			Ship enemy = pickNearestEnemyShip(space, ship);
+		//
+		//			// find the highest valued nearby asteroid
+		//			Asteroid asteroid = pickNearestFreeAsteroid(space, ship);
+		//
+		//			AbstractAction newAction = null;
+		//
+		//			// if there is no enemy nearby, go for an asteroid
+		//			if (enemy == null) {
+		//				if (asteroid != null) {
+		//					return mineAsteroid(space, ship, asteroid);
+		//				} else {
+		//					// no enemy and no asteroid, just skip this turn (shouldn't happen often)
+		//					shouldShoot = true;
+		//					newAction = new DoNothingAction();
+		//					return newAction;
+		//				}
+		//			}
+		//
+		//			// now decide which one to aim for
+		//			if (asteroid != null) {
+		//				double enemyDistance = space.findShortestDistance(ship.getPosition(), enemy.getPosition());
+		//				double asteroidDistance = space.findShortestDistance(ship.getPosition(), asteroid.getPosition());
+		//
+		//				// we are aggressive, so aim for enemies if they are nearby
+		//				// --- and if they have any resources ---
+		//				if (enemyDistance < asteroidDistance && enemy.getResources().getTotal() > 0) {
+		//					shouldShoot = true;
+		//					newAction = new MoveToObjectAction(space, currentPosition, enemy,
+		//							enemy.getPosition().getTranslationalVelocity());
+		//
+		//				} else {
+		//					shouldShoot = false;
+		//					newAction = mineAsteroid(space, ship, asteroid);
+		//				}
+		//				return newAction;
+		//			} else {
+		//				newAction = new MoveToObjectAction(space, currentPosition, enemy,
+		//						enemy.getPosition().getTranslationalVelocity());
+		//			}
+		//			return newAction;
+		//		}
 
-//		return ship.getCurrentAction();
+		//		return ship.getCurrentAction();
 
 	}
 
@@ -261,9 +293,9 @@ public class AnthonyModelTeamClient extends TeamClient {
 	public boolean isPathClearOfAsteroids(Toroidal2DPhysics space, Position startPosition, Position goalPosition,
 			Set<Asteroid> obstructions, int freeRadius) {
 		Vector2D pathToGoal = space.findShortestDistanceVector(startPosition, goalPosition); // Shortest straight line
-																								// path from
-																								// startPosition to
-																								// goalPosition
+		// path from
+		// startPosition to
+		// goalPosition
 		double distanceToGoal = pathToGoal.getMagnitude(); // Distance of straight line path
 
 		boolean pathIsClear = true; // Boolean showing whether or not the path is clear
@@ -489,7 +521,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 		ArrayList<GridSquare> temp = new ArrayList<GridSquare>();
 		// First grid square at 0,0
 		temp.add(new GridSquare(0, widthGrid, 0, heightGrid));
-		// First row of gridSquares
+		// First row of gridSquares**CHANGED TO i = 0
 		for (int i = 1; i < 25; i++)
 		{
 			temp.add(new GridSquare(temp.get(i - 1).endX, temp.get(i - 1).endX + widthGrid, temp.get(i - 1).startY, heightGrid));
@@ -510,9 +542,9 @@ public class AnthonyModelTeamClient extends TeamClient {
 			}
 			grid.add(temp);
 		}
-		
-		
-//		updateObstacles(space, null);
+
+
+		//		updateObstacles(space, null);
 	}
 
 	@Override
@@ -520,38 +552,48 @@ public class AnthonyModelTeamClient extends TeamClient {
 		// TODO Auto-generated method stub
 
 	}
-	
+
 	/**
 	 * A* method for searching
 	 * @param space
 	 */
-	public void aStarMethod(Toroidal2DPhysics space) {
+	public void aStarMethod(Toroidal2DPhysics space, AbstractObject goal, Ship ship) {
 		GridSquare shipGrid = null;
-		
+
 		//Finds the ships grid
-		for(ArrayList<GridSquare> g: grid) {
-			if(g.get(g.size()).containsShip) {
-				shipGrid = g.get(g.size());
+		for(int i = 0; i < grid.size() - 1; i++) {
+			for(int j = 0; j < grid.get(i).size() - 1; j++) {
+				if(grid.get(i).get(j).containsShip) {
+					System.out.println("FOUND SHIP GRID");
+					shipGrid = grid.get(i).get(j);
+				}
+
 			}
+
 		}
 		//Get all 8 grids adjacent to the ships grid
-		for(ArrayList<GridSquare> g: grid) {
-			if(g.get(g.size()).isAdjacent(shipGrid)) {
-				adjacentGrids.add(g.get(g.size()));
+		for(int i = 0; i < grid.size() - 1; i++) {
+			for(int j = 0; j < grid.get(i).size() - 1; j++) {
+				if(grid.get(i).get(j).isAdjacent(shipGrid)) {
+					if(grid.get(i).get(j).isEmpty || grid.get(i).get(j).containsGoal){
+						adjacentGrids.add(grid.get(i).get(j));
+						System.out.println("ADDING EMPTY GRID");
+					}
+
+				}
+
 			}
+
 		}
-		//TODO:Determine h(n) and g(n) values for each of the grids
-		
-		
-		//TODO:add grids to priority queue using g(n) + h(n), lowest score wins priority
-		
-		
-		//TODO:pop grids and upon visiting them, pop the next, etc.
-		
-		
-		
+		//Determine h(n) and g(n) values for each of the grids
+		for(GridSquare gS: adjacentGrids) {
+			gS.calculatePathCost(space, goal, ship,shipGrid);
+		}
+		//add grids to priority queue using g(n) + h(n), lowest score wins priority
+
+		queue.addAll(adjacentGrids);
 	}
-	
+
 	public void updateObstacles(Toroidal2DPhysics space, Ship ship, AbstractObject goal)
 	{
 		for (ArrayList<GridSquare> grids: grid)
@@ -562,7 +604,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 				square.containsShip(space, ship);
 				if (goal != null)
 					square.containsGoal(space, goal);	
-				square.calculatePathCost(space, goal, ship);
+				//TODO: REMOVED not sure if needed --> square.calculatePathCost(space, goal, ship);
 			}
 		}
 	}
@@ -578,10 +620,10 @@ public class AnthonyModelTeamClient extends TeamClient {
 				if (square.containsGoal || square.containsShip)
 				{
 					RectangleGraphics rect = square.getGraphics();
-//					rect.setFill(true);
+					//					rect.setFill(true);
 					graphics.add(rect);
-//					if (square.containsShip)
-//						System.out.println(square.getPathCost());
+					//					if (square.containsShip)
+					//						System.out.println(square.getPathCost());
 				}
 				else if (!square.isEmpty)
 				{
@@ -591,12 +633,12 @@ public class AnthonyModelTeamClient extends TeamClient {
 				}
 				else
 					graphics.add(square.getGraphics());
-//				else if (!square.isEmpty && (square.containsShip || square.containsGoal))
-//				{
-//					graphics.add(square.getGraphics());
-//				}
-//				else
-//					graphics.add(square.getGraphics());
+				//				else if (!square.isEmpty && (square.containsShip || square.containsGoal))
+				//				{
+				//					graphics.add(square.getGraphics());
+				//				}
+				//				else
+				//					graphics.add(square.getGraphics());
 			}
 		}
 		return graphics;
@@ -689,7 +731,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 
 		for (AbstractActionableObject actionableObject : actionableObjects) {
 			SpaceSettlersPowerupEnum powerup = SpaceSettlersPowerupEnum.values()[random
-					.nextInt(SpaceSettlersPowerupEnum.values().length)];
+			                                                                     .nextInt(SpaceSettlersPowerupEnum.values().length)];
 			if (actionableObject.isValidPowerup(powerup) && random.nextDouble() < weaponsProbability && shouldShoot) {
 				powerUps.put(actionableObject.getId(), powerup);
 			}
