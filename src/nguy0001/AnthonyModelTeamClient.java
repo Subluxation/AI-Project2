@@ -443,6 +443,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 					goalGrid = grid.get(i).get(j);
 			}
 		}
+//		space.getHeight()/25
 
 		// updateObstacles(space, null);
 	}
@@ -479,18 +480,20 @@ public class AnthonyModelTeamClient extends TeamClient {
 					{
 						shipGrid = square;
 						ArrayList<GridSquare> adjacentGrids = new ArrayList<GridSquare>();
-						for(int i = 0; i < grid.size(); i++) {
-							for(int j = 0; j < grid.get(i).size(); j++) {
-								if(grid.get(i).get(j).isAdjacent(shipGrid)) {
-									if(grid.get(i).get(j).isEmpty || grid.get(i).get(j).containsGoal){
-										adjacentGrids.add(grid.get(i).get(j));
-									}
-
-								}
-
-							}
-
-						}
+//						for(int i = 0; i < grid.size(); i++) {
+//							for(int j = 0; j < grid.get(i).size(); j++) {
+//								if(grid.get(i).get(j).isAdjacent(shipGrid)) {
+//									if(grid.get(i).get(j).isEmpty || grid.get(i).get(j).containsGoal){
+//										adjacentGrids.add(grid.get(i).get(j));
+//									}
+//
+//								}
+//
+//							}
+//
+//						}
+						adjacentGrids = square.getAdjacent(grid);
+						System.out.println(adjacentGrids.size());
 						for (GridSquare adjGrid: adjacentGrids)
 						{
 							graphics.add(new RectangleGraphics((int) (adjGrid.endX - adjGrid.startX), (int) (adjGrid.endY - adjGrid.startY), Color.WHITE, new Position(adjGrid.startX, adjGrid.startY)));
@@ -499,12 +502,13 @@ public class AnthonyModelTeamClient extends TeamClient {
 					
 					
 					// System.out.println(square.getPathCost());
-				} else if (!square.isEmpty) {
-					RectangleGraphics rect = square.getGraphics();
-					rect.setFill(true);
-					graphics.add(rect);
-				} else
-					graphics.add(square.getGraphics());
+				}
+//				else if (!square.isEmpty) {
+//					RectangleGraphics rect = square.getGraphics();
+//					rect.setFill(true);
+//					graphics.add(rect);
+//				} else
+//					graphics.add(square.getGraphics());
 				// else if (!square.isEmpty && (square.containsShip || square.containsGoal))
 				// {
 				// graphics.add(square.getGraphics());
@@ -649,7 +653,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 		root = new TreeGrid<GridSquare>(shipGrid);
 		for (GridSquare child: root.getData().getAdjacent(grid)) 
 		{
-			child.calculatePathCost(space, goal, ship, shipGrid);
+//			child.calculatePathCost(space, goal, ship, shipGrid);
 			new TreeGrid<GridSquare>(root, child);
 		}
 		
@@ -658,7 +662,11 @@ public class AnthonyModelTeamClient extends TeamClient {
 		{
 			for (GridSquare child: node.getData().getAdjacent(grid))
 			{
-				child.calculatePathCost(space, goal, ship, shipGrid);
+//				child.calculatePathCost(space, goal, ship, shipGrid);
+				if (!root.contains(node))
+				{
+					
+				}
 				new TreeGrid<GridSquare>(node, child);
 			}
 		}
