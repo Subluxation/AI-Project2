@@ -2,6 +2,7 @@ package nguy0001;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -14,6 +15,7 @@ import java.util.UUID;
 
 import nguy0001.GridSquare;
 import nguy0001.GridComparator;
+import nguy0001.AStar;
 import spacesettlers.actions.MoveToObjectAction;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
@@ -46,14 +48,15 @@ import spacesettlers.utilities.Vector2D;
  */
 public class AnthonyModelTeamClient extends TeamClient {
 	Beacon beacon;
+	Boolean finishedAStar = false;
 	HashMap<UUID, Ship> asteroidToShipMap;
 	HashMap<UUID, Boolean> aimingForBase;
 	Comparator<GridSquare> comparator = new GridComparator();
 	// Priority Queue of GridSquares
-	PriorityQueue<GridSquare> queue = new PriorityQueue<>(comparator);;
+	PriorityQueue<GridSquare> queue;
 	// Grid represented by a matrix of GridSquares
 	// Queue and Grid both initialized in the initialize() method
-	ArrayList<ArrayList<GridSquare>> grid;
+	static ArrayList<ArrayList<GridSquare>> grid;
 	ArrayList<GridSquare> adjacentGrids = new ArrayList<GridSquare>();
 	//	GridSquare grid;
 	UUID asteroidCollectorID;
@@ -105,6 +108,8 @@ public class AnthonyModelTeamClient extends TeamClient {
 		AbstractAction current = ship.getCurrentAction();
 		Position currentPosition = ship.getPosition();
 
+
+
 		//update the grid every 15 timesteps
 		if (space.getCurrentTimestep() % 15 == 0)
 		{
@@ -112,18 +117,17 @@ public class AnthonyModelTeamClient extends TeamClient {
 		}
 
 		//run aStar method every 60 timesteps
-		if(space.getCurrentTimestep() % 60 == 0) {
+		if(space.getCurrentTimestep() % 75 == 0 || space.getCurrentTimestep() == 1) {
 			//Pick nearest beacon and select it as goal
 			beacon = pickNearestBeacon(space, ship);
 			shouldShoot = false;
 			aimingForBase.put(ship.getId(), false);
 			this.goal = beacon;
-			aStarMethod(space, goal, ship);
-		}
-		if(ship.getCurrentAction().isMovementFinished(space)) {
-			//If the queue is empty, then research for new Beacon
-			if(queue.poll() != null) {
-				System.out.println("Going to Location: " + queue.poll().center.toString());
+			aStarMethod(space, goal,ship);
+			
+			
+			if(!queue.isEmpty()) {
+				System.out.println("Going to Location: " + queue.peek().center.toString());
 				return new MoveAction(space,ship.getPosition(),queue.poll().center);
 			}
 			else {
@@ -132,12 +136,32 @@ public class AnthonyModelTeamClient extends TeamClient {
 				shouldShoot = false;
 				aimingForBase.put(ship.getId(), false);
 				this.goal = beacon;
-				aStarMethod(space, goal, ship);
-				return new DoNothingAction();
+				aStarMethod(space, goal,ship);
+				return ship.getCurrentAction();
 			}
+
+
+
+
 		}
+//		if(space.getCurrentTimestep() == 0 || ship.getCurrentAction().isMovementFinished(space)) { 
+//			//If the queue is empty, then search for new Beacon
+//			if(!queue.isEmpty()) {
+//				System.out.println("Going to Location: " + queue.peek().center.toString());
+//				return new MoveAction(space,ship.getPosition(),queue.poll().center);
+//			}
+//			else {
+//				System.out.println("Queue is Empty:");
+//				beacon = pickNearestBeacon(space, ship);
+//				shouldShoot = false;
+//				aimingForBase.put(ship.getId(), false);
+//				this.goal = beacon;
+//				aStarMethod(space, goal,ship);
+//				return new DoNothingAction();
+//			}
+//		}
 		return new DoNothingAction();
-		
+
 
 		// Asteroid badAst = pickNearestUselessAsteroid(space, ship);
 
@@ -542,9 +566,6 @@ public class AnthonyModelTeamClient extends TeamClient {
 			}
 			grid.add(temp);
 		}
-
-
-		//		updateObstacles(space, null);
 	}
 
 	@Override
@@ -557,42 +578,57 @@ public class AnthonyModelTeamClient extends TeamClient {
 	 * A* method for searching
 	 * @param space
 	 */
-	public void aStarMethod(Toroidal2DPhysics space, AbstractObject goal, Ship ship) {
+	public void aStarMethod(Toroidal2DPhysics space, AbstractObject goal,Ship ship) {
 		GridSquare shipGrid = null;
+		//reversed queue, highest values go to first
+		queue = new PriorityQueue<>(Collections.reverseOrder());
+		//calculating oath cost for each
+		for(int i = 0; i < grid.size() - 1; i++) {
+			for(int j = 0; j < grid.get(i).size() - 1; j++) {
+				grid.get(i).get(j).calculatePathCost(space, goal, ship);
+			}
+		}
+
 
 		//Finds the ships grid
-		for(int i = 0; i < grid.size() - 1; i++) {
-			for(int j = 0; j < grid.get(i).size() - 1; j++) {
-				if(grid.get(i).get(j).containsShip) {
-					System.out.println("FOUND SHIP GRID");
-					shipGrid = grid.get(i).get(j);
-				}
-
-			}
-
-		}
-		//Get all 8 grids adjacent to the ships grid
-		for(int i = 0; i < grid.size() - 1; i++) {
-			for(int j = 0; j < grid.get(i).size() - 1; j++) {
-				if(grid.get(i).get(j).isAdjacent(shipGrid)) {
-					if(grid.get(i).get(j).isEmpty || grid.get(i).get(j).containsGoal){
-						adjacentGrids.add(grid.get(i).get(j));
-						System.out.println("ADDING EMPTY GRID");
+		outerloop:
+			for(int i = 0; i < grid.size(); i++) {
+				for(int j = 0; j < grid.get(i).size(); j++) {
+					if(grid.get(i).get(j).containsShip) {
+						System.out.println("FOUND SHIP GRID");
+						shipGrid = grid.get(i).get(j);
+						break outerloop;
 					}
-
 				}
-
 			}
-
+		if(shipGrid != null) {
+			queue = AStar.newAStarMethod(AStar.getAdjacentTree(GridSquare.getAdjacent(grid, shipGrid))); 
 		}
-		//Determine h(n) and g(n) values for each of the grids
-		for(GridSquare gS: adjacentGrids) {
-			gS.calculatePathCost(space, goal, ship,shipGrid);
+		else {
+			System.err.println("Error: shipGrid is null");
 		}
-		//add grids to priority queue using g(n) + h(n), lowest score wins priority
 
-		queue.addAll(adjacentGrids);
+
 	}
+	/**
+	 * Find all adjacent GridSquare's to the middle grid, excluding non-empty grids.
+	 * @param middleGrid
+	 * @return An ArrayList of the Adjacent Grid's
+	 */
+	public ArrayList<GridSquare> getAdjacentGrids(GridSquare middleGrid){
+		ArrayList<GridSquare> adjacentGridList = new ArrayList<GridSquare>();
+		for(int i = 0; i < grid.size() - 1; i++) {
+			for(int j = 0; j < grid.get(i).size() - 1; j++) {
+				if(grid.get(i).get(j).isAdjacent(middleGrid)) {
+					if(grid.get(i).get(j).isEmpty || grid.get(i).get(j).containsGoal) {
+						adjacentGridList.add(grid.get(i).get(j));
+					}
+				}
+			}
+		}
+		return adjacentGridList;
+	}
+
 
 	public void updateObstacles(Toroidal2DPhysics space, Ship ship, AbstractObject goal)
 	{
