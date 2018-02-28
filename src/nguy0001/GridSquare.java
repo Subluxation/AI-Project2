@@ -34,6 +34,8 @@ public class GridSquare {
 		
 		this.center = new Position((endX + startX) / 2, (endY + startY) / 2);
 	}
+	
+	
 	/**
 	 * To calculate h(n) and g(n) and sets pathCost to f(n). { f(n) = g(n) + h(n) }
 	 * @param space
@@ -42,16 +44,15 @@ public class GridSquare {
 	 */
 	public void calculatePathCost(Toroidal2DPhysics space, AbstractObject goal, Ship ship, GridSquare currentGrid)
 	{
-		//Calculating g(n)
-		if (containsShip)
-			this.pathCost = space.findShortestDistance(center, goal.getPosition());
-		else if (containsGoal)
+		//Calculating g(n) +
+		if (containsGoal)
 			this.pathCost = 0.0;
 		else
 			this.pathCost = space.findShortestDistance(ship.getPosition(), center) + space.findShortestDistance(center, goal.getPosition());
-		//Calculating h(n)
-		this.pathCost += space.findShortestDistance(goal.getPosition(), currentGrid.center);
+		
 	}
+	
+	
 	/**
 	 * For updateObstacles method in model client
 	 * @param space
@@ -60,9 +61,7 @@ public class GridSquare {
 	 */
 	public void calculatePathCost(Toroidal2DPhysics space, AbstractObject goal, Ship ship)
 	{
-		if (containsShip)
-			this.pathCost = space.findShortestDistance(center, goal.getPosition());
-		else if (containsGoal)
+		if (containsGoal)
 			this.pathCost = 0.0;
 		else
 			this.pathCost = space.findShortestDistance(ship.getPosition(), center) + space.findShortestDistance(center, goal.getPosition());

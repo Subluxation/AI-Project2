@@ -22,6 +22,7 @@ public class AStar {
 	public static ArrayList<ArrayList<GridSquare>> getAdjacentTree(ArrayList<GridSquare> adjacentGridsToShip) {
 		ArrayList<ArrayList<GridSquare>> currentChildren = new ArrayList<ArrayList<GridSquare>>();
 		ArrayList<GridSquare> temp = new ArrayList<GridSquare>();
+		int count = 0;
 
 		//Add all children to index i 
 		for(int i = 0; i < adjacentGridsToShip.size(); i++) {
@@ -35,10 +36,54 @@ public class AStar {
 					temp.add(adjacentToGridI.get(k));
 				}
 				currentChildren.add(temp);
-				//System.out.println("Added to currentChildren");
+				System.out.println("Added to currentChildren: " + count++);
 			}
 		}
 		return currentChildren;
+	}
+
+
+
+
+
+	public static PriorityQueue<GridSquare> finalAStarMethod(ArrayList<ArrayList<GridSquare>> childrensChildrenAdj, ArrayList<GridSquare> childrenGrid){
+		GridSquare lowestVal = null;
+		Comparator<GridSquare> comparator = new GridComparator();
+		PriorityQueue<GridSquare> queue = new PriorityQueue(comparator);
+		boolean solutionFound = false;
+		
+
+		while(!solutionFound) {
+			
+			for(int i = 0; i < childrensChildrenAdj.size(); i++) {
+				for(int j = 0; j < childrensChildrenAdj.get(i).size(); j++) {
+					if(i == 0 && j == 0) {
+						lowestVal = childrensChildrenAdj.get(i).get(j);
+					}
+					else if(lowestVal.pathCost > childrensChildrenAdj.get(i).get(j).pathCost) {
+						lowestVal = childrensChildrenAdj.get(i).get(j);
+					}
+				}
+			}
+			
+			queue.add(lowestVal);
+			
+			if(lowestVal.containsGoal) {
+				System.out.println("Found Goal Grid!");
+				solutionFound = true;
+			}
+			else {
+				childrenGrid.clear();
+				GridSquare.getAdjacent(AnthonyModelTeamClient.grid, lowestVal);
+				childrensChildrenAdj = getAdjacentTree(GridSquare.getAdjacent(AnthonyModelTeamClient.grid,lowestVal));
+			}
+			System.out.println("Solution not found yet...");
+		}
+
+
+
+
+		return null;
 	}
 
 
@@ -59,10 +104,11 @@ public class AStar {
 		int currentindex = 0;
 		int parentindex = 0;
 		int nextLowestparentindex = 0;
+		boolean begin = true;
 
 
 		while(!solutionFound){
-			
+
 			//If we pop the top of the queue and see a gridsquare with pathcost 0.0, meaning its the goal, then change flag to break loop
 			if(!queue.isEmpty() && queue.peek().pathCost == 0.0) {
 				solutionFound = true;
@@ -70,7 +116,7 @@ public class AStar {
 			}
 			else{
 				//Don’t compare to anything, so lowest val is temporarily added to queue
-				if(level == 0) {
+				if(begin) {
 					//System.out.println("(if)Level: " + level + "Children size: " + currentChildren.get(level).size());
 					for(int j = 0; j < currentChildren.get(level).size(); j++) {
 						if(j == 0) {
@@ -89,46 +135,47 @@ public class AStar {
 					previousChildren = currentChildren;
 					currentChildren = getAdjacentTree(GridSquare.getAdjacent(AnthonyModelTeamClient.grid,currentChildren.get(level).get(currentindex)));
 					level++;
+					begin = false;
 				}
 				else {
 					//compare to previous children
 					//System.out.println("(else)Level: " + level + "Children size: " + currentChildren.get(level).size());
-					for(int j = 0; j < currentChildren.get(level).size(); j++) {
+					System.out.println("level in else:" + level);
+					for(int j = 0; j < currentChildren.get(level - 1).size(); j++) {
 						if(j == 0) {
-							lowestVal = currentChildren.get(level).get(j);
+							lowestVal = currentChildren.get(level - 1).get(j);
 						}
 						else {
-							if(currentChildren.get(level).get(j).pathCost < lowestVal.pathCost) {
-								lowestVal = currentChildren.get(level).get(j);
+							if(currentChildren.get(level - 1).get(j).pathCost < lowestVal.pathCost) {
+								lowestVal = currentChildren.get(level - 1).get(j);
 								//get value of lowest pathcost GridSquare 
 								currentindex = j;
 							}
 						}
 					}
 					queue.add(lowestVal);
-					
+
 					//If the lowest value is greater then the second lowest previous child, then remove from list and go up a level…
 					//TODO: If we make a priority queue of the lowest values, we could just remove the top member and get the next lowest.
 					//temporary work around---------------------
 					ArrayList<ArrayList<GridSquare>> nextLowestChild = previousChildren;
-					nextLowestChild.get(level).remove(parentindex);//TODO: HERE
-					
+					nextLowestChild.get(level - 1).remove(parentindex);//TODO: HERE
+
 					//Refers to the new lowest from the previous children
 					GridSquare newLow = null;
-					for(int j = 0; j < nextLowestChild.get(level).size(); j++) { 
+					for(int j = 0; j < nextLowestChild.get(level - 1).size(); j++) { 
 						if(j == 0) {
-							newLow = nextLowestChild.get(level).get(j);
+							newLow = nextLowestChild.get(level - 1).get(j);
 						}
 						else {
-							if(nextLowestChild.get(level).get(j).pathCost < newLow.pathCost) {
-								newLow = nextLowestChild.get(level).get(j);
+							if(nextLowestChild.get(level - 1).get(j).pathCost < newLow.pathCost) {
+								newLow = nextLowestChild.get(level - 1).get(j);
 								//get value of next lowest pathcost GridSquare 
 								nextLowestparentindex = j;
 							}
 						}
 					}
 					//-------------------------
-					level++;
 					if(lowestVal.pathCost > newLow.pathCost) {
 						queue.remove(lowestVal);
 						//Remove the old "lowest" gridsquare since its lowest child value is greater than a previous child
@@ -139,6 +186,7 @@ public class AStar {
 						queue.add(newLow);
 
 					}
+					level++;
 				}
 			}
 

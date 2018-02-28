@@ -602,7 +602,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 				}
 			}
 		if(shipGrid != null) {
-			queue = AStar.newAStarMethod(AStar.getAdjacentTree(GridSquare.getAdjacent(grid, shipGrid))); 
+			queue = AStar.finalAStarMethod(AStar.getAdjacentTree(GridSquare.getAdjacent(grid, shipGrid)),GridSquare.getAdjacent(grid, shipGrid)); 
 		}
 		else {
 			System.err.println("Error: shipGrid is null");
