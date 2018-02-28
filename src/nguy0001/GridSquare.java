@@ -458,7 +458,7 @@ public class GridSquare {
 				adjacentGrids.add(grid.get(row - 1).get(col + 1 - grid.size()));
 			}
 		}
-//		adjacentGrids.sort(new GridComparator());
+		adjacentGrids.sort(new GridComparator());
 //		System.out.println(adjacentGrids.size());
 		return adjacentGrids;
 	}

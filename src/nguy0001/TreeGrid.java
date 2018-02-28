@@ -43,16 +43,16 @@ public class TreeGrid<GridSquare> {
 	
 	// Go through the entire tree to see if the specified gridSquare is
 	// in this tree (DFS)
-	public boolean contains(TreeGrid<GridSquare> tree)
+	public boolean contains(GridSquare grid)
 	{
-		if (this.data == tree.getData())
+		if (this.data == grid)
 			return true;
 		else
 		{
 			// FIFO loop
 			for (int i = 0; i < children.size(); i--)
 			{
-				children.get(i).contains(tree);
+				children.get(i).contains(grid);
 			}
 		}
 		return false;

@@ -33,11 +33,9 @@ import spacesettlers.utilities.Position;
 import spacesettlers.utilities.Vector2D;
 
 /**
- * Modification of the aggressive heuristic asteroid collector to a team that
- * only has one ship. It tries to collect resources but it also tries to shoot
- * other ships if they are nearby.
+ * This collector only retrieves beacons using the A * algorithm.
  * 
- * Made changes to retreat to a nearby ally if low on energy
+ * The secondary algorithm used to compare is the Hill Climbing algorithm
  * 
  * @author amy modified by Anthony and Spencer
  */
@@ -49,15 +47,12 @@ public class AnthonyModelTeamClient extends TeamClient {
 	// Grid represented by a matrix of GridSquares
 	// Queue and Grid both initialized in the initialize() method
 	ArrayList<ArrayList<GridSquare>> grid;
-	// Path represents the path the algorithm decided is best
-	ArrayList<GridSquare> path;
+	ArrayList<GridSquare> path = new ArrayList<GridSquare>();
 	// GridSquare grid;
 	UUID asteroidCollectorID;
 	double weaponsProbability = 1;
 	boolean shouldShoot = false;
 	AbstractObject goal;
-	GridSquare shipGrid;
-	GridSquare goalGrid;
 
 	/**
 	 * Assigns ships to asteroids and beacons, as described above
@@ -96,117 +91,27 @@ public class AnthonyModelTeamClient extends TeamClient {
 	 * @return
 	 */
 	private AbstractAction getAggressiveAsteroidCollectorAction(Toroidal2DPhysics space, Ship ship) {
-		AbstractAction current = ship.getCurrentAction();
-		Position currentPosition = ship.getPosition();
-		GridSquare square;
+		GridSquare square = null;
 		updateObstacles(space, ship, goal);
-		if (space.getCurrentTimestep() % 10 == 0) {			
+		if (space.getCurrentTimestep() % 25 == 0 || space.getCurrentTimestep() == 0) {			
 			Beacon beacon = pickNearestBeacon(space, ship);
 			shouldShoot = false;
 			aimingForBase.put(ship.getId(), false);
 			this.goal = beacon;
-//			DFSearch(space, goal, ship);
-//			// Gets the first of the path arraylist (i.e., the next step)
-//			square = path.get(0);
-//			// 'Popping' the queue so next time the next step will be the second, then the third, and so on
-//			path.remove(0);
-//			return new CustomMove(space, ship.getPosition(), goal.getPosition()); 
+			System.out.println("Yay");
+			this.path = HillClimb(space, goal, ship);
+			square = this.path.remove(0);
+			if (square.containsGoal)
+				return new CustomMove(space, ship.getPosition(), beacon.getPosition());
+			else
+				return new CustomMove(space, ship.getPosition(), square.center);
 		}		
-//		else
-			return new DoNothingAction();
+		// Gets the first of the path arraylist (i.e., the next step)
+		// 'Popping' the queue so next time the next step will be the second, then the
+		// third, and so on
 
-		// Asteroid badAst = pickNearestUselessAsteroid(space, ship);
-
-		// aim for a beacon if there isn't enough energy
-		// if (ship.getEnergy() > 2000) {
-
-		
-		
-//		return retrieveBeacon(space, ship, beacon);
-		// }
-
-		// -------------------------------------------------
-		// if the ship has resources but energy is low
-		//
-		// purpose to get score without risk of getting killed
-		// -------------------------------------------------
-		// if (ship.getResources().getTotal() > 500 && ship.getEnergy() < 2000) {
-		// Base base = findNearestBase(space, ship);
-		// aimingForBase.put(ship.getId(), true);
-		// shouldShoot = false;
-		// return goBackToNearestBase(space, ship, base);
-		// }
-		//
-		// // if the ship has enough resourcesAvailable, take it back to base
-		// if (ship.getResources().getTotal() > 1000) {
-		// Base base = findNearestBase(space, ship);
-		// aimingForBase.put(ship.getId(), true);
-		// shouldShoot = false;
-		// return goBackToNearestBase(space, ship, base);
-		// }
-
-		// did we bounce off the base?
-		// if (ship.getResources().getTotal() == 0 && ship.getEnergy() > 2000 &&
-		// aimingForBase.containsKey(ship.getId())
-		// && aimingForBase.get(ship.getId())) {
-		// current = null;
-		// aimingForBase.put(ship.getId(), false);
-		// shouldShoot = false;
-		// }
-
-		// otherwise either for an asteroid or an enemy ship (depending on who is closer
-		// and what we need)
-		// if (current == null || current.isMovementFinished(space)) {
-		// aimingForBase.put(ship.getId(), false);
-		//
-		// // see if there is an enemy ship nearby
-		// Ship enemy = pickNearestEnemyShip(space, ship);
-		//
-		// // find the highest valued nearby asteroid
-		// Asteroid asteroid = pickNearestFreeAsteroid(space, ship);
-		//
-		// AbstractAction newAction = null;
-		//
-		// // if there is no enemy nearby, go for an asteroid
-		// if (enemy == null) {
-		// if (asteroid != null) {
-		// return mineAsteroid(space, ship, asteroid);
-		// } else {
-		// // no enemy and no asteroid, just skip this turn (shouldn't happen often)
-		// shouldShoot = true;
-		// newAction = new DoNothingAction();
-		// return newAction;
-		// }
-		// }
-		//
-		// // now decide which one to aim for
-		// if (asteroid != null) {
-		// double enemyDistance = space.findShortestDistance(ship.getPosition(),
-		// enemy.getPosition());
-		// double asteroidDistance = space.findShortestDistance(ship.getPosition(),
-		// asteroid.getPosition());
-		//
-		// // we are aggressive, so aim for enemies if they are nearby
-		// // --- and if they have any resources ---
-		// if (enemyDistance < asteroidDistance && enemy.getResources().getTotal() > 0)
-		// {
-		// shouldShoot = true;
-		// newAction = new MoveToObjectAction(space, currentPosition, enemy,
-		// enemy.getPosition().getTranslationalVelocity());
-		//
-		// } else {
-		// shouldShoot = false;
-		// newAction = mineAsteroid(space, ship, asteroid);
-		// }
-		// return newAction;
-		// } else {
-		// newAction = new MoveToObjectAction(space, currentPosition, enemy,
-		// enemy.getPosition().getTranslationalVelocity());
-		// }
-		// return newAction;
-		// }
-
-		// return ship.getCurrentAction();
+		else
+			return ship.getCurrentAction();
 
 	}
 
@@ -432,20 +337,6 @@ public class AnthonyModelTeamClient extends TeamClient {
 			}
 			grid.add(temp);
 		}
-		
-		// Finds the ships grid
-		for (int i = 0; i < grid.size() - 1; i++) {
-			for (int j = 0; j < grid.get(i).size() - 1; j++) {
-				if (grid.get(i).get(j).containsShip) {
-					shipGrid = grid.get(i).get(j);
-				}
-				else if (grid.get(i).get(j).containsGoal)
-					goalGrid = grid.get(i).get(j);
-			}
-		}
-//		space.getHeight()/25
-
-		// updateObstacles(space, null);
 	}
 
 	@Override
@@ -478,29 +369,14 @@ public class AnthonyModelTeamClient extends TeamClient {
 					graphics.add(rect);
 					if (square.containsShip)
 					{
-						shipGrid = square;
 						ArrayList<GridSquare> adjacentGrids = new ArrayList<GridSquare>();
-//						for(int i = 0; i < grid.size(); i++) {
-//							for(int j = 0; j < grid.get(i).size(); j++) {
-//								if(grid.get(i).get(j).isAdjacent(shipGrid)) {
-//									if(grid.get(i).get(j).isEmpty || grid.get(i).get(j).containsGoal){
-//										adjacentGrids.add(grid.get(i).get(j));
-//									}
-//
-//								}
-//
-//							}
-//
-//						}
 						adjacentGrids = square.getAdjacent(grid);
-						System.out.println(adjacentGrids.size());
 						for (GridSquare adjGrid: adjacentGrids)
 						{
+//						GridSquare adjGrid = adjacentGrids.get(0);
 							graphics.add(new RectangleGraphics((int) (adjGrid.endX - adjGrid.startX), (int) (adjGrid.endY - adjGrid.startY), Color.WHITE, new Position(adjGrid.startX, adjGrid.startY)));
 						}
-					}
-					
-					
+					}					
 					// System.out.println(square.getPathCost());
 				}
 //				else if (!square.isEmpty) {
@@ -517,6 +393,16 @@ public class AnthonyModelTeamClient extends TeamClient {
 				// graphics.add(square.getGraphics());
 			}
 		}
+//		
+//		if (path != null)
+//		{
+//			System.out.println(path.size());
+//			for (GridSquare adjGrid: path)
+//			{
+//				graphics.add(new RectangleGraphics((int) (adjGrid.endX - adjGrid.startX), (int) (adjGrid.endY - adjGrid.startY), Color.WHITE, new Position(adjGrid.startX, adjGrid.startY)));
+//			}
+//			
+//		}
 		
 		return graphics;
 	}
@@ -617,59 +503,72 @@ public class AnthonyModelTeamClient extends TeamClient {
 		return powerUps;
 	}
 
-	public void DFSearch(Toroidal2DPhysics space, AbstractObject goal, Ship ship) {
-		this.path = new ArrayList<GridSquare>();
-		GridSquare nextGrid;
+	/*
+	 * Hill Climb method performs the hill climbing algorithm
+	 * 
+	 * Looks at its adjacent grids and naively chooses to go to the highest-valued one
+	 * 
+	 */
+	public ArrayList<GridSquare> HillClimb(Toroidal2DPhysics space, AbstractObject goal, Ship ship) {
+		ArrayList<GridSquare> temp = new ArrayList<GridSquare>();
+		GridSquare shipGrid = null;
+		GridSquare goalGrid = null;
+		GridSquare nextGrid = null;
 		// Root node has the shipGrid
-		TreeGrid<GridSquare> root;
-
-//		
-//		// Gets the first adjacent grid to the ship (which should be the one with the lowest pathcost)
-//		for (int adj = 0; adj < shipGrid.getAdjacent(grid).size(); adj++)
+//		TreeGrid<GridSquare> root;
+//
+//				// Initialize the root node
+//		root = new TreeGrid<GridSquare>(shipGrid);
+//		for (GridSquare child: root.getData().getAdjacent(grid)) 
 //		{
-//			if (shipGrid.getAdjacent(grid).get(adj).isEmpty(space))
-//			{
-//				nextGrid = shipGrid.getAdjacent(grid).get(adj);
-//				path.add(nextGrid);
-//				break;
-//			}
+////			child.calculatePathCost(space, goal, ship, shipGrid);
+//			if (child.isEmpty || child.containsShip)
+//				new TreeGrid<GridSquare>(root, child);
 //		}
-//		// Find a path from this nextGrid to the goalGrid
-//		while (!path.contains(goalGrid))
+//		
+//		// Get the children's children
+//		for (TreeGrid<GridSquare> node: root.getChildren())
 //		{
-//			for (int next = 0; next < nextGrid.getAdjacent(grid).size(); next++)
+//			for (GridSquare child: node.getData().getAdjacent(grid))
 //			{
-//				if (nextGrid.getAdjacent(grid).get(next).isEmpty(space))
+////				child.calculatePathCost(space, goal, ship, shipGrid);
+//				if (!root.contains(child) && (child.isEmpty || child.containsShip))
 //				{
-//					nextGrid = shipGrid.getAdjacent(grid).get(next);
-//					path.add(nextGrid);
-//					break;
+//					new TreeGrid<GridSquare>(node, child);
 //				}
 //			}
 //		}
-	
 		
-		// Initialize the root node
-		root = new TreeGrid<GridSquare>(shipGrid);
-		for (GridSquare child: root.getData().getAdjacent(grid)) 
+		// Find the grid containing the ship and the goal
+		for (int i = 0; i < grid.size(); i++)
 		{
-//			child.calculatePathCost(space, goal, ship, shipGrid);
-			new TreeGrid<GridSquare>(root, child);
-		}
-		
-		// Get the children's children
-		for (TreeGrid<GridSquare> node: root.getChildren())
-		{
-			for (GridSquare child: node.getData().getAdjacent(grid))
+			for (int j = 0; j < grid.size(); j++)
 			{
-//				child.calculatePathCost(space, goal, ship, shipGrid);
-				if (!root.contains(node))
-				{
-					
-				}
-				new TreeGrid<GridSquare>(node, child);
+				if (grid.get(i).get(j).containsGoal(space, goal))
+					goalGrid = grid.get(i).get(j);
+				else if (grid.get(i).get(j).containsShip(space, ship))
+					shipGrid = grid.get(i).get(j);
 			}
 		}
+		
+		for (ArrayList<GridSquare> gridCol: grid)
+		{
+			for (GridSquare sq: gridCol)
+				sq.calculatePathCost(space, goal, ship, shipGrid);
+		}
+		
+		// Gets the first adjacent grid to the ship (which should be the one with the lowest pathcost)
+		for (int adj = 0; adj < 8; adj++)
+		{
+			if (shipGrid.getAdjacent(grid).get(adj).isEmpty(space))
+			{
+				nextGrid = shipGrid.getAdjacent(grid).get(adj);
+				temp.add(nextGrid);
+				break;
+			}
+		}
+		return temp;
+		
 	}
 
 }
