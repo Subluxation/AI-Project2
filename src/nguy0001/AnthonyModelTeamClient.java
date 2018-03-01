@@ -131,7 +131,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 				return new MoveAction(space,ship.getPosition(),queue.poll().center);
 			}
 			else {
-				System.out.println("Queue is Empty:");
+				System.out.println("Bad Grids are all around Ship!");
 				beacon = pickNearestBeacon(space, ship);
 				shouldShoot = false;
 				aimingForBase.put(ship.getId(), false);
@@ -603,7 +603,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 				}
 			}
 		if(shipGrid != null) {
-			queue = AStar.finalAStarMethod(AStar.getAdjacentTree(GridSquare.getAdjacent(grid, shipGrid)),GridSquare.getAdjacent(grid, shipGrid)); 
+			queue = AStar.finalAStarMethod(AStar.getAdjacentTree(GridSquare.getAdjacent(grid, shipGrid)),GridSquare.getAdjacent(grid, shipGrid));
 		}
 		else {
 			System.err.println("Error: shipGrid is null");

@@ -25,6 +25,10 @@ public class AStar {
 		int count = 0;
 
 		//Add all children to index i 
+		if(adjacentGridsToShip.isEmpty()) {
+			System.out.println("All grids around area are bad, DONT MOVE!");
+			return null;
+		}
 		for(int i = 0; i < adjacentGridsToShip.size(); i++) {
 			ArrayList<GridSquare> adjacentToGridI = GridSquare.getAdjacent(AnthonyModelTeamClient.grid,adjacentGridsToShip.get(i));
 			if(adjacentToGridI.isEmpty()) {
@@ -48,6 +52,9 @@ public class AStar {
 
 
 	public static PriorityQueue<GridSquare> finalAStarMethod(ArrayList<ArrayList<GridSquare>> ccA, ArrayList<GridSquare> childrenGrid){
+		long start = System.currentTimeMillis();
+		long stop = 0;
+		long time = 0;
 		GridSquare lowestVal = null;
 		Comparator<GridSquare> comparator = new GridComparator();
 		PriorityQueue<GridSquare> queue = new PriorityQueue(comparator);
@@ -58,8 +65,11 @@ public class AStar {
 		//System.out.println("New Solutions!");
 		while(!solutionFound) {
 			//if(childrensChildrenAdj != previousAdj) {
-				//System.out.println("Comparing different children values! GOOD!!");
+			//System.out.println("Comparing different children values! GOOD!!");
 			//}
+			if(childrensChildrenAdj.isEmpty()) {
+				return null;
+			}
 			outerloop:
 				for(int i = 0; i < childrensChildrenAdj.size(); i++) {
 					for(int j = 0; j < childrensChildrenAdj.get(i).size(); j++) {
@@ -93,21 +103,29 @@ public class AStar {
 		else {
 			//childrenGrid.clear();
 			//childrenGrid.addAll(GridSquare.getAdjacent(AnthonyModelTeamClient.grid, lowestVal));
-			previousAdj = childrensChildrenAdj;
+			//previousAdj = childrensChildrenAdj;
 			if(lowestVal != null) {
+				if(getAdjacentTree(GridSquare.getAdjacent(AnthonyModelTeamClient.grid,lowestVal)) == null) {
+					return null;
+				}
 				childrensChildrenAdj = getAdjacentTree(GridSquare.getAdjacent(AnthonyModelTeamClient.grid,lowestVal));
 				begin = true;
 			}
 
 			//System.out.println("***Solution not found yet...***");
 		}
-
+		//timeout avoidance
+		stop = System.currentTimeMillis();
+		time += stop-start;
+		if(time > 250) {
+			return queue;
+		}
 		}
 
 
 
 
-		return null;
+		return queue;
 	}
 
 

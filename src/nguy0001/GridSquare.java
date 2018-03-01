@@ -451,7 +451,14 @@ public class GridSquare {
 		}
 		adjacentGrids.sort(new GridComparator());
 //		System.out.println(adjacentGrids.size());
-		return adjacentGrids;
+		ArrayList<GridSquare> finalList = new ArrayList<GridSquare>();
+		for(int i = 0; i < adjacentGrids.size(); i++) {
+			if(adjacentGrids.get(i).isEmpty) {
+				finalList.add(adjacentGrids.get(i));
+			}
+		}
+//		System.out.println(finalList.size());
+		return finalList;
 	}
 	
 	public double getWidth()
