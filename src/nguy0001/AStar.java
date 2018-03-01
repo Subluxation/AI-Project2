@@ -33,6 +33,7 @@ public class AStar {
 			ArrayList<GridSquare> adjacentToGridI = GridSquare.getAdjacent(AnthonyModelTeamClient.grid,adjacentGridsToShip.get(i));
 			if(adjacentToGridI.isEmpty()) {
 				System.err.println("Error: adjacentToGridI is empty, it should not be.");
+				return null;
 			}
 			else {
 				for(int k = 0; k < adjacentToGridI.size(); k++) {
