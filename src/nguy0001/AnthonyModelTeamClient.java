@@ -134,12 +134,14 @@ public class AnthonyModelTeamClient extends TeamClient {
 			else {
 				//bad grids are surrounding ship, relocate at timespace
 				System.out.println("Bad Grids are all around Ship!");
-				beacon = pickNearestBeacon(space, ship);
-				shouldShoot = false;
-				aimingForBase.put(ship.getId(), false);
-				this.goal = beacon;
-				aStarMethod(space, goal,ship);
-				return ship.getCurrentAction();
+				
+//				beacon = pickNearestBeacon(space, ship);
+//				shouldShoot = false;
+//				aimingForBase.put(ship.getId(), false);
+//				this.goal = beacon;
+//				aStarMethod(space, goal,ship);
+//				return ship.getCurrentAction();
+				return new MoveToObjectAction(space,ship.getPosition(),(AbstractObject)pickNearestFreeAsteroid(space, ship));
 			}
 
 
