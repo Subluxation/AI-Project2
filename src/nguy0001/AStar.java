@@ -36,7 +36,7 @@ public class AStar {
 					temp.add(adjacentToGridI.get(k));
 				}
 				currentChildren.add(temp);
-				System.out.println("Added to currentChildren: " + count++);
+				//System.out.println("Added to currentChildren: " + count++);
 			}
 		}
 		return currentChildren;
@@ -51,33 +51,39 @@ public class AStar {
 		Comparator<GridSquare> comparator = new GridComparator();
 		PriorityQueue<GridSquare> queue = new PriorityQueue(comparator);
 		boolean solutionFound = false;
-		
+		boolean begin = true;
+
 
 		while(!solutionFound) {
-			
+
 			for(int i = 0; i < childrensChildrenAdj.size(); i++) {
 				for(int j = 0; j < childrensChildrenAdj.get(i).size(); j++) {
-					if(i == 0 && j == 0) {
+					//System.out.println("Size of childrensChildrenAdj: " + childrensChildrenAdj.size() + "\nSize of childrensChildrenAdj.get(" + i + "): " + childrensChildrenAdj.get(i).size());
+					if(begin) {
 						lowestVal = childrensChildrenAdj.get(i).get(j);
+						begin = false;
 					}
 					else if(lowestVal.pathCost > childrensChildrenAdj.get(i).get(j).pathCost) {
 						lowestVal = childrensChildrenAdj.get(i).get(j);
 					}
+					//System.out.println("PathCost for lowestVal: " + lowestVal.pathCost + "\n PathCost for Compare:" +childrensChildrenAdj.get(i).get(j).pathCost);
 				}
 			}
-			
+			System.out.println("PathCost: " + lowestVal.pathCost);
 			queue.add(lowestVal);
-			
-			if(lowestVal.containsGoal) {
+
+			if(lowestVal.pathCost == 0.0) {
 				System.out.println("Found Goal Grid!");
 				solutionFound = true;
+				break;
 			}
 			else {
-				childrenGrid.clear();
-				GridSquare.getAdjacent(AnthonyModelTeamClient.grid, lowestVal);
+				//childrenGrid.clear();
+				//childrenGrid.addAll(GridSquare.getAdjacent(AnthonyModelTeamClient.grid, lowestVal));
 				childrensChildrenAdj = getAdjacentTree(GridSquare.getAdjacent(AnthonyModelTeamClient.grid,lowestVal));
+				System.out.println("***Solution not found yet...***");
 			}
-			System.out.println("Solution not found yet...");
+			
 		}
 
 

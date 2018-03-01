@@ -53,7 +53,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 	HashMap<UUID, Boolean> aimingForBase;
 	Comparator<GridSquare> comparator = new GridComparator();
 	// Priority Queue of GridSquares
-	PriorityQueue<GridSquare> queue;
+	PriorityQueue<GridSquare> queue = new PriorityQueue<GridSquare>(Collections.reverseOrder());
 	// Grid represented by a matrix of GridSquares
 	// Queue and Grid both initialized in the initialize() method
 	static ArrayList<ArrayList<GridSquare>> grid;
@@ -126,7 +126,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 			aStarMethod(space, goal,ship);
 			
 			
-			if(!queue.isEmpty()) {
+			if(queue.size() != 0) {
 				System.out.println("Going to Location: " + queue.peek().center.toString());
 				return new MoveAction(space,ship.getPosition(),queue.poll().center);
 			}
@@ -581,7 +581,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 	public void aStarMethod(Toroidal2DPhysics space, AbstractObject goal,Ship ship) {
 		GridSquare shipGrid = null;
 		//reversed queue, highest values go to first
-		queue = new PriorityQueue<>(Collections.reverseOrder());
+		//queue = new PriorityQueue<>(Collections.reverseOrder());
 		//calculating oath cost for each
 		for(int i = 0; i < grid.size() - 1; i++) {
 			for(int j = 0; j < grid.get(i).size() - 1; j++) {
