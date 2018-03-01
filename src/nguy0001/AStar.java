@@ -12,7 +12,7 @@ public class AStar {
 	//Tree structure based on adjacentGridsToShip ArrayList…
 	//index0:first adjacent grid, index1:second adjacent grid, etc…
 	//
-	//gridChildren = current children
+	//current children
 	//
 	/**
 	 * Performs a tree building operation for the ship with its adjacent grids
@@ -29,6 +29,7 @@ public class AStar {
 			System.out.println("All grids around area are bad, DONT MOVE!");
 			return null;
 		}
+		//gets the children of all the children and puts them in the corresponding index
 		for(int i = 0; i < adjacentGridsToShip.size(); i++) {
 			ArrayList<GridSquare> adjacentToGridI = GridSquare.getAdjacent(AnthonyModelTeamClient.grid,adjacentGridsToShip.get(i));
 			if(adjacentToGridI.isEmpty()) {
@@ -37,14 +38,14 @@ public class AStar {
 			}
 			else {
 				for(int k = 0; k < adjacentToGridI.size(); k++) {
-					//System.out.println(adjacentToGridI.get(k).center.toString());
 					temp.add(adjacentToGridI.get(k));
 				}
+				//adds all adjacent children to child to the currentChild arraylist
 				currentChildren.add(temp);
-				//System.out.println("Added");
+				
 			}
 		}
-
+		//returns the arraylist of arraylist of gridsquares adjacent to child
 		return currentChildren;
 	}
 
@@ -53,6 +54,7 @@ public class AStar {
 
 
 	public static PriorityQueue<GridSquare> finalAStarMethod(ArrayList<ArrayList<GridSquare>> ccA, ArrayList<GridSquare> childrenGrid){
+		//initialization of all varibales used in method
 		long start = System.currentTimeMillis();
 		long stop = 0;
 		long time = 0;
@@ -63,25 +65,26 @@ public class AStar {
 		boolean begin = true;
 		ArrayList<ArrayList<GridSquare>> childrensChildrenAdj = ccA;
 		ArrayList<ArrayList<GridSquare>> previousAdj = ccA;
-		//System.out.println("New Solutions!");
+		//While a solution hasnt been found
 		while(!solutionFound) {
-			//if(childrensChildrenAdj != previousAdj) {
-			//System.out.println("Comparing different children values! GOOD!!");
-			//}
-			if(childrensChildrenAdj.isEmpty()) {
+			
+			if(childrensChildrenAdj == null) {
 				return null;
 			}
+			//Find the lowest value of all the childrens children
 			outerloop:
 				for(int i = 0; i < childrensChildrenAdj.size(); i++) {
 					for(int j = 0; j < childrensChildrenAdj.get(i).size(); j++) {
-						//System.out.println("Size of childrensChildrenAdj: " + childrensChildrenAdj.size() + "\nSize of childrensChildrenAdj.get(" + i + "): " + childrensChildrenAdj.get(i).size());
+						//if the first item, then set it to lowest
 						if(begin) {
 							lowestVal = childrensChildrenAdj.get(i).get(j);
 							begin = false;
 						}
+						//if there is a new lowest, then replace the old
 						else if(lowestVal.pathCost > childrensChildrenAdj.get(i).get(j).pathCost) {
 							lowestVal = childrensChildrenAdj.get(i).get(j);
 						}
+						//if the grid is the goal grid, then break out of the loop
 						if(lowestVal.pathCost == 0.0) {
 							solutionFound = true;
 							break outerloop;
@@ -89,22 +92,20 @@ public class AStar {
 						//System.out.println("PathCost for lowestVal: " + lowestVal.pathCost + "\n PathCost for Compare:" +childrensChildrenAdj.get(i).get(j).pathCost);
 					}
 				}
-
+		//if queue is empty or the smallest value is greater than the newest value, then add the grid to the queue
 		if(queue.peek() == null || lowestVal.pathCost < queue.peek().pathCost) {
 			System.out.println("PathCost: " + lowestVal.pathCost);
 			queue.add(lowestVal);
 		}
 
-
+		//again break the loop if it is the goal grid
 		if(lowestVal.pathCost == 0.0) {
 			System.out.println("Found Goal Grid!");
 			solutionFound = true;
 			break;
 		}
 		else {
-			//childrenGrid.clear();
-			//childrenGrid.addAll(GridSquare.getAdjacent(AnthonyModelTeamClient.grid, lowestVal));
-			//previousAdj = childrensChildrenAdj;
+			//if the no "errors" set the childrens children adjacent grids to the adjacent children of the lowest pathcost grid
 			if(lowestVal != null) {
 				if(getAdjacentTree(GridSquare.getAdjacent(AnthonyModelTeamClient.grid,lowestVal)) == null) {
 					return null;
@@ -113,7 +114,6 @@ public class AStar {
 				begin = true;
 			}
 
-			//System.out.println("***Solution not found yet...***");
 		}
 		//timeout avoidance
 		stop = System.currentTimeMillis();

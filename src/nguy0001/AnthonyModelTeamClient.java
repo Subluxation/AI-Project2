@@ -16,10 +16,11 @@ import java.util.UUID;
 import nguy0001.GridSquare;
 import nguy0001.GridComparator;
 import nguy0001.AStar;
+import nguy0001.MoveAction;
 import spacesettlers.actions.MoveToObjectAction;
 import spacesettlers.actions.AbstractAction;
 import spacesettlers.actions.DoNothingAction;
-import spacesettlers.actions.MoveAction;
+//import spacesettlers.actions.MoveAction;
 import spacesettlers.actions.PurchaseCosts;
 import spacesettlers.actions.PurchaseTypes;
 import spacesettlers.clients.TeamClient;
@@ -116,7 +117,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 			updateObstacles(space, ship, goal);
 		}
 
-		//run aStar method every 60 timesteps
+		//run aStar method every 75 timesteps
 		if(space.getCurrentTimestep() % 75 == 0 || space.getCurrentTimestep() == 1) {
 			//Pick nearest beacon and select it as goal
 			beacon = pickNearestBeacon(space, ship);
@@ -125,12 +126,13 @@ public class AnthonyModelTeamClient extends TeamClient {
 			this.goal = beacon;
 			aStarMethod(space, goal,ship);
 			
-			
+			//if the queue is not empty, pop the largest pathcost grid and go there
 			if(queue.peek() != null) {
 				System.out.println("Going to Location: " + queue.peek().center.toString());
 				return new MoveAction(space,ship.getPosition(),queue.poll().center);
 			}
 			else {
+				//bad grids are surrounding ship, relocate at timespace
 				System.out.println("Bad Grids are all around Ship!");
 				beacon = pickNearestBeacon(space, ship);
 				shouldShoot = false;
