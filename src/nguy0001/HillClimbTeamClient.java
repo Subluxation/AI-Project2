@@ -2,7 +2,6 @@ package nguy0001;
 
 import java.awt.Color;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -43,19 +42,21 @@ import spacesettlers.utilities.Vector2D;
  * 
  * @author amy modified by Anthony and Spencer
  */
-public class AnthonyModelTeamClient extends TeamClient {
+public class HillClimbTeamClient extends TeamClient {
 	HashMap<UUID, Ship> asteroidToShipMap;
 	HashMap<UUID, Boolean> aimingForBase;
 	// Priority Queue of GridSquares
-	PriorityQueue<GridSquare> queue = new PriorityQueue<GridSquare>(Collections.reverseOrder());
+	PriorityQueue<GridSquare> queue;
 	// Grid represented by a matrix of GridSquares
 	// Queue and Grid both initialized in the initialize() method
-	static ArrayList<ArrayList<GridSquare>> grid;
+	ArrayList<ArrayList<GridSquare>> grid;
 	ArrayList<GridSquare> path = new ArrayList<GridSquare>();
 	// GridSquare grid;
 	UUID asteroidCollectorID;
 	double weaponsProbability = 1;
 	boolean shouldShoot = false;
+	int timeBegin;
+	int timeEnd;
 	AbstractObject goal;
 
 	/**
@@ -132,15 +133,12 @@ public class AnthonyModelTeamClient extends TeamClient {
 				aimingForBase.put(ship.getId(), false);
 				this.goal = asteroid;
 			}
-			aStarMethod(space, goal, ship);
-			if(queue.peek() != null) {
-				System.out.println("Going to Location: " + queue.peek().center.toString());
-				return new CustomMove(space,ship.getPosition(),queue.poll().center);
-			}			
-			if (queue.peek().containsGoal)
+//			this.path = HillClimb(space, goal, ship);
+			square = HillClimb(space, goal, ship);
+			if (square.containsGoal)
 				return new CustomMove(space, ship.getPosition(), goal.getPosition());
 			else
-				return new CustomMove(space, ship.getPosition(), queue.peek().center);
+				return new CustomMove(space, ship.getPosition(), square.center);
 		}		
 		// Gets the first of the path arraylist (i.e., the next step)
 		// 'Popping' the queue so next time the next step will be the second, then the
@@ -381,9 +379,15 @@ public class AnthonyModelTeamClient extends TeamClient {
 						adjacentGrids = square.getAdjacent(grid);
 						for (GridSquare adjGrid: adjacentGrids)
 						{
-//						GridSquare adjGrid = adjacentGrids.get(0);
-							graphics.add(new RectangleGraphics((int) (adjGrid.endX - adjGrid.startX), (int) (adjGrid.endY - adjGrid.startY), Color.WHITE, new Position(adjGrid.startX, adjGrid.startY)));
+							if (adjGrid.isEmpty)
+							{
+
+								graphics.add(new RectangleGraphics((int) (adjGrid.endX - adjGrid.startX), (int) (adjGrid.endY - adjGrid.startY), Color.WHITE, new Position(adjGrid.startX, adjGrid.startY)));
+							
+							}
 						}
+						
+//						GridSquare adjGrid = adjacentGrids.get(0);}
 					}					
 					// System.out.println(square.getPathCost());
 				}
@@ -511,42 +515,41 @@ public class AnthonyModelTeamClient extends TeamClient {
 		return powerUps;
 	}
 
-	/**
-	 * A* method for searching
-	 * @param space
+	/*
+	 * Hill Climb method performs the hill climbing algorithm
+	 * 
+	 * Looks at its adjacent grids and naively chooses to go to the highest-valued one
+	 * 
 	 */
-	public void aStarMethod(Toroidal2DPhysics space, AbstractObject goal,Ship ship) {
+	public GridSquare HillClimb(Toroidal2DPhysics space, AbstractObject goal, Ship ship) {
+//		GridSquare temp = null;
 		GridSquare shipGrid = null;
-		//reversed queue, highest values go to first
-		//queue = new PriorityQueue<>(Collections.reverseOrder());
+		GridSquare goalGrid = null;
+//		GridSquare nextGrid = null;
 		
-		//calculating path cost for each
-		for(int i = 0; i < grid.size(); i++) {
-			for(int j = 0; j < grid.get(i).size(); j++) {
-				grid.get(i).get(j).calculatePathCost(space, goal, ship);
+		// Find the grid containing the ship and the goal
+		for (int i = 0; i < grid.size(); i++)
+		{
+			for (int j = 0; j < grid.size(); j++)
+			{
+				if (grid.get(i).get(j).containsGoal)
+					goalGrid = grid.get(i).get(j);
+				if (grid.get(i).get(j).containsShip)
+					shipGrid = grid.get(i).get(j);
 			}
 		}
-
-
-		//Finds the ships grid
-		outerloop:
-			for(int i = 0; i < grid.size(); i++) {
-				for(int j = 0; j < grid.get(i).size(); j++) {
-					if(grid.get(i).get(j).containsShip) {
-						System.out.println("FOUND SHIP GRID");
-						shipGrid = grid.get(i).get(j);
-						break outerloop;
-					}
-				}
-			}
-		if(shipGrid != null) {
-			queue = AStar.finalAStarMethod(AStar.getAdjacentTree(GridSquare.getAdjacent(grid, shipGrid)),GridSquare.getAdjacent(grid, shipGrid)); 
+		
+		for (ArrayList<GridSquare> gridCol: grid)
+		{
+			for (GridSquare sq: gridCol)
+				sq.calculatePathCost(space, goal, ship, shipGrid);
 		}
-		else {
-			System.err.println("Error: shipGrid is null");
-		}
-
-
+		
+		ArrayList<GridSquare> adjGrids = shipGrid.getAdjacent(grid);
+		// Gets the first adjacent grid to the ship (which should be the one with the lowest pathcost)
+		
+		return adjGrids.get(0);
+		
 	}
 
 }
