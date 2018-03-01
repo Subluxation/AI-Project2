@@ -126,7 +126,7 @@ public class AnthonyModelTeamClient extends TeamClient {
 			aStarMethod(space, goal,ship);
 			
 			
-			if(queue.size() != 0) {
+			if(queue.peek() != null) {
 				System.out.println("Going to Location: " + queue.peek().center.toString());
 				return new MoveAction(space,ship.getPosition(),queue.poll().center);
 			}
@@ -539,27 +539,27 @@ public class AnthonyModelTeamClient extends TeamClient {
 		// Width and HeightGrids hold the respective sizes of each grid
 		// Where each grid square has a width of 1/25 of the map's width
 		// and likewise for its height
-		double widthGrid = space.getWidth()/25;
-		double heightGrid = space.getHeight()/25;
+		double widthGrid = space.getWidth()/20;
+		double heightGrid = space.getHeight()/20;
 		// temp used to add in the Grid matrix
 		ArrayList<GridSquare> temp = new ArrayList<GridSquare>();
 		// First grid square at 0,0
 		temp.add(new GridSquare(0, widthGrid, 0, heightGrid));
 		// First row of gridSquares**CHANGED TO i = 0
-		for (int i = 1; i < 25; i++)
+		for (int i = 1; i < 20; i++)
 		{
 			temp.add(new GridSquare(temp.get(i - 1).endX, temp.get(i - 1).endX + widthGrid, temp.get(i - 1).startY, heightGrid));
 		}
 		grid.add(temp);
 		// Rest of the rows
 		// Represents the rows
-		for (int i = 1; i < 25; i++)
+		for (int i = 1; i < 20; i++)
 		{
 			temp = new ArrayList<GridSquare>();
 			// For the first square of the row, it starts on the very left, and then uses the previous row's endY to determine its startY
 			temp.add(new GridSquare(0, widthGrid, grid.get(i - 1).get(0).endY, grid.get(i - 1).get(0).endY + heightGrid));
 			// Represents the columns
-			for (int j = 1; j < 25; j++)
+			for (int j = 1; j < 20; j++)
 			{
 				// For the next squares in the row, it uses the previous squares in its own row to determine its startX
 				temp.add(new GridSquare(temp.get(j - 1).endX, temp.get(j - 1).endX + widthGrid, grid.get(i - 1).get(0).endY, grid.get(i - 1).get(0).endY + heightGrid));
@@ -582,9 +582,10 @@ public class AnthonyModelTeamClient extends TeamClient {
 		GridSquare shipGrid = null;
 		//reversed queue, highest values go to first
 		//queue = new PriorityQueue<>(Collections.reverseOrder());
-		//calculating oath cost for each
-		for(int i = 0; i < grid.size() - 1; i++) {
-			for(int j = 0; j < grid.get(i).size() - 1; j++) {
+		
+		//calculating path cost for each
+		for(int i = 0; i < grid.size(); i++) {
+			for(int j = 0; j < grid.get(i).size(); j++) {
 				grid.get(i).get(j).calculatePathCost(space, goal, ship);
 			}
 		}
